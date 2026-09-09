@@ -192,6 +192,11 @@ label.f{display:block;font-size:11.5px;letter-spacing:.09em;text-transform:upper
 .seg button{flex:1;padding:11px 4px;border-radius:11px;font-weight:700;font-size:14px;color:var(--muted);transition:background .15s,color .15s}
 .seg button[aria-pressed="true"]{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .seg.typed button[aria-pressed="true"][data-v="feed"]{color:var(--feed-ink)}
+.durs{display:flex;flex-wrap:wrap;gap:10px}
+.durs label{flex:1 1 calc(50% - 5px);display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card2);border-radius:14px;padding:6px 6px 6px 14px;font-weight:700;font-size:14px;min-width:0}
+.durs label span{color:var(--text);font-size:14px;white-space:nowrap}
+.durs input{width:78px;flex:none;text-align:center;background:var(--card);padding:10px 6px;font-weight:700;font-size:16px}
+.durs .tot{flex-basis:100%;font-size:12.5px;color:var(--muted);font-weight:600;text-align:right;padding-right:4px;margin-top:-2px}
 .checks{display:flex;gap:10px}
 .checks label{flex:1;display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:14px;padding:13px 14px;font-weight:700}
 .checks input{width:22px;height:22px;accent-color:var(--accent);margin:0}
@@ -297,8 +302,8 @@ ol.steps b{color:var(--text)}
       <div class="seg" id="edSide">
         <button data-v="L">Left</button><button data-v="R">Right</button><button data-v="LR">L → R</button><button data-v="RL">R → L</button>
       </div>
-      <label class="f">Minutes (optional)</label>
-      <input type="number" id="edDur" inputmode="numeric" min="0" max="600" placeholder="—">
+      <label class="f">Minutes on each side (optional)</label>
+      <div class="durs" id="edDurs"></div>
     </div>
     <div id="edDiaper">
       <label class="f">What was in it</label>
@@ -393,6 +398,14 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function me(){return S.settings.me||'';}
 const SIDE={L:'Left',R:'Right'};
 function sideName(s){if(!s)return'';return s.split('').map(c=>SIDE[c]||c).join(' → ');}
+/* Per-side timing. A feed carries segs:[{s:'L'|'R',sec}] in nursing order; dur is the
+   rounded total in minutes. Older entries without segs fall back to dur alone. */
+function segsOf(e){if(e.segs&&e.segs.length)return e.segs;if(e.dur&&(e.side||'').length===1)return[{s:e.side,sec:e.dur*60}];return null;}
+function sideMins(e){const o={L:0,R:0};const g=segsOf(e);if(g)for(const s of g)o[s.s]=(o[s.s]||0)+s.sec/60;return o;}
+function mins(sec){return Math.max(1,Math.round(sec/60));}
+function fmtSplit(e){const g=segsOf(e);if(!g||g.length<2)return e.dur?e.dur+' min':'';return segTotal(g)+' min · '+g.map(s=>s.s+' '+mins(s.sec)).join(' · ');}
+function segTotal(g){return g.reduce((a,s)=>a+mins(s.sec),0);} // sum of rounded parts, so the total always matches what's shown
+function liveSides(a){const parts=(a.segs||[]).map(g=>SIDE[g.s]+' '+mins(g.sec)+'m');parts.push(SIDE[a.side]+' '+elapsed(a.segStart||a.start));return parts.join(' → ');}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 /* ---------- events ---------- */
@@ -404,9 +417,10 @@ function delEvent(ev){const day=dayKey(ev.at);const tomb={del:true,u:Date.now()}
 function setActive(a){S.active=a||null;S.activeU=Date.now();save();push('state/active',{feed:S.active,u:S.activeU});render();}
 
 /* quick actions */
-function startFeed(side){if(S.active)endFeed(true);const now=Date.now();const ev={id:uid(),t:'feed',at:now,side,dur:null,by:me()};putEvent(ev);setActive({id:ev.id,day:dayKey(now),start:now,side,sides:side,by:me()});toast('Feeding · '+SIDE[side],()=>{delEvent(ev);});}
-function switchSide(){const a=S.active;if(!a)return;const ns=a.side==='L'?'R':'L';const sides=a.sides+ns;patchActiveEvent({side:sides});setActive(Object.assign({},a,{side:ns,sides}));}
-function endFeed(silent){const a=S.active;if(!a)return;const dur=Math.max(1,Math.round((Date.now()-a.start)/60000));patchActiveEvent({side:a.sides,dur});setActive(null);if(!silent)toast('Feed ended · '+dur+' min');}
+function startFeed(side){if(S.active)endFeed(true);const now=Date.now();const ev={id:uid(),t:'feed',at:now,side,dur:null,by:me()};putEvent(ev);setActive({id:ev.id,day:dayKey(now),start:now,side,sides:side,segStart:now,segs:[],by:me()});toast('Feeding · '+SIDE[side],()=>{delEvent(ev);});}
+function closeSeg(a,now){return (a.segs||[]).concat([{s:a.side,sec:Math.max(1,Math.round((now-(a.segStart||a.start))/1000))}]);}
+function switchSide(){const a=S.active;if(!a)return;const now=Date.now();const ns=a.side==='L'?'R':'L';const sides=a.sides+ns;const segs=closeSeg(a,now);patchActiveEvent({side:sides,segs});setActive(Object.assign({},a,{side:ns,sides,segStart:now,segs}));toast('Switched to '+SIDE[ns]+' · '+SIDE[a.side]+' was '+mins(segs[segs.length-1].sec)+' min');}
+function endFeed(silent){const a=S.active;if(!a)return;const now=Date.now();const segs=closeSeg(a,now);const dur=segTotal(segs);patchActiveEvent({side:a.sides,segs,dur});setActive(null);if(!silent)toast('Feed ended · '+(segs.length>1?segs.map(s=>s.s+' '+mins(s.sec)).join(' · ')+' · '+dur+' min total':dur+' min'));}
 function patchActiveEvent(patch){const a=S.active;const d=S.days[a.day];const ev=d&&d.events[a.id];if(ev&&!ev.del)putEvent(Object.assign({},ev,patch));}
 function logDiaper(pee,poop){const ev={id:uid(),t:'diaper',at:Date.now(),pee,poop,by:me()};putEvent(ev);toast((pee&&poop?'Wet + dirty':pee?'Wet diaper':'Dirty diaper')+' · '+fmtTime(ev.at),()=>delEvent(ev));}
 function logSpit(){const ev={id:uid(),t:'spit',at:Date.now(),by:me()};putEvent(ev);toast('Spit-up · '+fmtTime(ev.at),()=>delEvent(ev));}
@@ -489,19 +503,21 @@ function render(){
   const a=S.active;
   const de=dayEvents(view.day);
   const n={feeds:de.filter(e=>e.t==='feed').length,L:de.filter(e=>e.t==='feed'&&(e.side||'').includes('L')).length,R:de.filter(e=>e.t==='feed'&&(e.side||'').includes('R')).length,wet:de.filter(e=>e.t==='diaper'&&e.pee).length,dirty:de.filter(e=>e.t==='diaper'&&e.poop).length,spit:de.filter(e=>e.t==='spit').length};
-  const mins=de.filter(e=>e.t==='feed'&&e.dur).reduce((s,e)=>s+e.dur,0);
+  const tot=de.filter(e=>e.t==='feed'&&e.dur).reduce((s,e)=>s+e.dur,0);
+  const sm=de.filter(e=>e.t==='feed').reduce((o,e)=>{const m=sideMins(e);o.L+=m.L;o.R+=m.R;return o;},{L:0,R:0});
+  const feedExtra=(sm.L||sm.R)?'L '+Math.round(sm.L)+'m · R '+Math.round(sm.R)+'m':'L '+n.L+' · R '+n.R;
 
   // hero
   const hero=$('#hero');
   if(!isToday){hero.hidden=true;hero.innerHTML='';}
   else if(a){
     hero.hidden=false;hero.className='hero live';
-    hero.innerHTML='<div class="eyebrow"><i class="pulse"></i>Feeding · '+SIDE[a.side]+' side'+(a.by?' · '+esc(a.by):'')+'</div><div class="big num" id="activeElapsed">'+elapsed(a.start)+'</div><div class="sub">Started '+fmtTime(a.start)+(a.sides.length>1?' · '+sideName(a.sides):'')+'</div><div class="actions"><button id="switchSide">Switch to '+SIDE[a.side==='L'?'R':'L']+'</button><button class="primary" id="endFeed">End feed</button></div>';
+    hero.innerHTML='<div class="eyebrow"><i class="pulse"></i>Feeding · '+SIDE[a.side]+' side'+(a.by?' · '+esc(a.by):'')+'</div><div class="big num" id="activeElapsed">'+elapsed(a.start)+'</div><div class="sub num"><span id="activeSides">'+liveSides(a)+'</span> · started '+fmtTime(a.start)+'</div><div class="actions"><button id="switchSide">Switch to '+SIDE[a.side==='L'?'R':'L']+'</button><button class="primary" id="endFeed">End feed</button></div>';
     $('#switchSide').onclick=switchSide;$('#endFeed').onclick=()=>endFeed(false);
   }else if(lastFeed){
     hero.hidden=false;hero.className='hero';
     const gap=now-lastFeed.at;const pct=Math.min(100,Math.round(gap/FEED_GAP*100));const warn=gap>FEED_GAP;
-    hero.innerHTML='<div class="eyebrow"><i class="k feed"></i>Since last feed</div><div class="big num'+(warn?' warn':'')+'">'+agoBig(lastFeed.at)+'</div><div class="sub">'+sideName(lastFeed.side)+(lastFeed.dur?' · '+lastFeed.dur+' min':'')+' · '+fmtTime(lastFeed.at)+(dayKey(lastFeed.at)!==t?' '+fmtDate(dayKey(lastFeed.at)):'')+(lastFeed.by?' · '+esc(lastFeed.by):'')+'</div><div class="bar"><span class="'+(warn?'warn':'')+'" style="width:'+pct+'%"></span></div>';
+    hero.innerHTML='<div class="eyebrow"><i class="k feed"></i>Since last feed</div><div class="big num'+(warn?' warn':'')+'">'+agoBig(lastFeed.at)+'</div><div class="sub">'+sideName(lastFeed.side)+(fmtSplit(lastFeed)?' · '+fmtSplit(lastFeed):'')+' · '+fmtTime(lastFeed.at)+(dayKey(lastFeed.at)!==t?' '+fmtDate(dayKey(lastFeed.at)):'')+(lastFeed.by?' · '+esc(lastFeed.by):'')+'</div><div class="bar"><span class="'+(warn?'warn':'')+'" style="width:'+pct+'%"></span></div>';
   }else{
     hero.hidden=false;hero.className='hero';
     hero.innerHTML='<div class="eyebrow"><i class="k feed"></i>Since last feed</div><div class="empty">Nothing logged yet. Tap <b>L</b> or <b>R</b> below when '+esc(first)+' latches, or <b>Earlier</b> to backfill.</div>';
@@ -515,7 +531,7 @@ function render(){
     since.innerHTML=tile('pee','Since wet',lastWet)+tile('poop','Since dirty',lastDirty);}
 
   // counts
-  $('#counts').innerHTML='<div><b class="num">'+n.feeds+'</b><span>feed'+(n.feeds===1?'':'s')+'</span>'+(n.feeds?'<i class="extra">L '+n.L+' · R '+n.R+(mins?' · '+mins+'m':'')+'</i>':'')+'</div><div><b class="num">'+n.wet+'</b><span>wet</span></div><div><b class="num">'+n.dirty+'</b><span>dirty</span></div><div><b class="num">'+n.spit+'</b><span>spit-up'+(n.spit===1?'':'s')+'</span></div>';
+  $('#counts').innerHTML='<div><b class="num">'+n.feeds+'</b><span>feed'+(n.feeds===1?'':'s')+'</span>'+(n.feeds?'<i class="extra">'+feedExtra+(tot&&!(sm.L||sm.R)?' · '+tot+'m':'')+'</i>':'')+'</div><div><b class="num">'+n.wet+'</b><span>wet</span></div><div><b class="num">'+n.dirty+'</b><span>dirty</span></div><div><b class="num">'+n.spit+'</b><span>spit-up'+(n.spit===1?'':'s')+'</span></div>';
 
   // timeline
   const wrap=$('#logWrap');
@@ -524,7 +540,7 @@ function render(){
     wrap.innerHTML=de.slice().reverse().map(e=>{
       let ic,title,meta=[];
       if(e.t==='feed'){const s=e.side||'';ic='<div class="ic feed">'+(s.length>1?s.replace(/L/g,'L').slice(0,2):s||'?')+'</div>';title='Feed · '+sideName(s);
-        if(a&&a.id===e.id)meta.push('<span class="live">In progress</span>');else if(e.dur)meta.push(e.dur+' min');}
+        if(a&&a.id===e.id)meta.push('<span class="live">In progress</span>');else if(fmtSplit(e))meta.push(fmtSplit(e));}
       else if(e.t==='diaper'){const both=e.pee&&e.poop;ic='<div class="ic '+(both?'both':e.pee?'pee':'poop')+'">'+(e.poop&&!e.pee?ICON.poop:ICON.drop)+'</div>';title=both?'Wet + dirty':e.pee?'Wet diaper':'Dirty diaper';}
       else{ic='<div class="ic spit">'+ICON.spit+'</div>';title='Spit-up';}
       if(e.note)meta.push(esc(e.note));if(e.by)meta.push(esc(e.by));
@@ -551,8 +567,10 @@ function openEditor(ev,preset){
   $('#edDelete').hidden=ed.isNew;
   const e=ed.ev;
   seg($('#edType'),e.t,v=>{e.t=v;showTypeFields();});
-  seg($('#edSide'),['L','R','LR','RL'].includes(e.side)?e.side:'L',v=>e.side=v);
-  $('#edDur').value=e.dur||'';$('#edPee').checked=!!e.pee;$('#edPoop').checked=!!e.poop;
+  if(!e.side)e.side='L';
+  seg($('#edSide'),['L','R','LR','RL'].includes(e.side)?e.side:'',v=>{e.side=v;renderDurs(e,true);});
+  renderDurs(e,false);
+  $('#edPee').checked=!!e.pee;$('#edPoop').checked=!!e.poop;
   if(e.t==='diaper'&&!e.pee&&!e.poop)$('#edPee').checked=true;
   $('#edAt').value=toLocalInput(e.at);$('#edNote').value=e.note||'';updateAtHint();
   showTypeFields();$('#editor').hidden=false;
@@ -561,12 +579,28 @@ function updateAtHint(){const ms=new Date($('#edAt').value).getTime();const h=$(
 $('#edChips').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('#edAt').value=toLocalInput(Date.now()-parseInt(b.dataset.m,10)*60000);updateAtHint();});
 $('#edAt').addEventListener('input',updateAtHint);
 function showTypeFields(){const t=ed.ev.t;$('#edFeed').hidden=t!=='feed';$('#edDiaper').hidden=t!=='diaper';}
+/* One minutes box per side in nursing order. Keeps whatever was typed when the side
+   pattern changes, falling back to the entry's recorded segments. */
+function renderDurs(e,keepTyped){
+  const prev=keepTyped?readDurs():null;
+  const chars=(e.side||'L').split('');const g=segsOf(e)||[];
+  const counts={};const el=$('#edDurs');
+  el.innerHTML=chars.map((c,i)=>{counts[c]=(counts[c]||0)+1;const label=SIDE[c]+(chars.filter(x=>x===c).length>1?' '+counts[c]:'');
+    let v='';if(prev&&prev[i]!=null)v=prev[i];else if(g[i]&&g[i].s===c)v=mins(g[i].sec);else if(chars.length===1&&e.dur)v=e.dur;
+    return '<label><span>'+label+'</span><input type="number" inputmode="numeric" min="0" max="600" placeholder="—" data-i="'+i+'" value="'+v+'"></label>';}).join('')+(chars.length>1?'<div class="tot" id="edTot"></div>':'');
+  el.oninput=updateTot;updateTot();
+}
+function readDurs(){return [...document.querySelectorAll('#edDurs input')].map(i=>{const n=parseInt(i.value,10);return isNaN(n)||n<=0?null:n;});}
+function updateTot(){const t=$('#edTot');if(!t)return;const s=readDurs().reduce((a,n)=>a+(n||0),0);t.textContent=s?'Total '+s+' min':'';}
 function saveEditor(){
   const e=ed.ev;const at=new Date($('#edAt').value).getTime();if(isNaN(at)){toast('Please pick a time');return;}
   if(at>Date.now()+5*60000){toast("That time hasn't happened yet");return;}
   const out={id:e.id,t:e.t,at,by:e.by||me()};
   const note=$('#edNote').value.trim();if(note)out.note=note;
-  if(e.t==='feed'){const pressed=$('#edSide [aria-pressed="true"]');out.side=pressed?pressed.dataset.v:(e.side||'L');const d=parseInt($('#edDur').value,10);out.dur=isNaN(d)||d<=0?null:d;}
+  if(e.t==='feed'){const pressed=$('#edSide [aria-pressed="true"]');out.side=pressed?pressed.dataset.v:(e.side||'L');
+    const chars=out.side.split('');const d=readDurs();
+    if(d.some(n=>n!=null)){out.segs=chars.map((c,i)=>({s:c,sec:(d[i]||0)*60})).filter(s=>s.sec>0);out.dur=d.reduce((a,n)=>a+(n||0),0);}
+    else{out.dur=null;}}
   if(e.t==='diaper'){out.pee=$('#edPee').checked;out.poop=$('#edPoop').checked;if(!out.pee&&!out.poop){toast('Tick pee, poop, or both');return;}}
   if(S.active&&S.active.id===out.id&&(out.t!=='feed'||out.dur))setActive(null);
   putEvent(out,ed.prevDay);closeSheets();toast(ed.isNew?'Added · '+fmtTime(at):'Saved');
@@ -645,16 +679,17 @@ function handleJoinHash(){
 function summaryText(){
   const de=dayEvents(view.day);const name=(S.settings.name||'Baby').split(' ')[0];
   const feeds=de.filter(e=>e.t==='feed'),wet=de.filter(e=>e.t==='diaper'&&e.pee).length,dirty=de.filter(e=>e.t==='diaper'&&e.poop).length,spit=de.filter(e=>e.t==='spit').length;
-  const mins=feeds.reduce((s,e)=>s+(e.dur||0),0);
+  const tot=feeds.reduce((s,e)=>s+(e.dur||0),0);
+  const sm=feeds.reduce((o,e)=>{const m=sideMins(e);o.L+=m.L;o.R+=m.R;return o;},{L:0,R:0});
   return [name+' · '+fmtDate(view.day)+(view.day===today()&&ageText()?' · '+ageText():''),
-    'Feeds: '+feeds.length+' (L '+feeds.filter(e=>(e.side||'').includes('L')).length+' / R '+feeds.filter(e=>(e.side||'').includes('R')).length+(mins?' · '+mins+' min':'')+')',
+    'Feeds: '+feeds.length+(tot?' · '+tot+' min'+((sm.L||sm.R)?' (L '+Math.round(sm.L)+' / R '+Math.round(sm.R)+')':''):''),
     'Wet: '+wet+' · Dirty: '+dirty+' · Spit-up: '+spit,'',
-    ...de.map(e=>fmtTime(e.at)+'  '+(e.t==='feed'?'Feed '+sideName(e.side)+(e.dur?' '+e.dur+'m':''):e.t==='diaper'?(e.pee&&e.poop?'Wet + dirty':e.pee?'Wet':'Dirty'):'Spit-up')+(e.note?' – '+e.note:''))].join('\n');
+    ...de.map(e=>fmtTime(e.at)+'  '+(e.t==='feed'?'Feed '+sideName(e.side)+(fmtSplit(e)?' · '+fmtSplit(e):''):e.t==='diaper'?(e.pee&&e.poop?'Wet + dirty':e.pee?'Wet':'Dirty'):'Spit-up')+(e.note?' – '+e.note:''))].join('\n');
 }
 async function shareSummary(){const text=summaryText();if(navigator.share){try{await navigator.share({text});return;}catch(e){if(e.name==='AbortError')return;}}copyText(text);}
 async function exportCsv(){
-  const rows=[['Date','Time','Type','Side','Duration (min)','Pee','Poop','Note','Logged by']];
-  for(const e of allEvents())rows.push([dayKey(e.at),fmtTime(e.at),e.t==='feed'?'Feed':e.t==='diaper'?'Diaper':'Spit-up',e.t==='feed'?sideName(e.side):'',e.dur||'',e.pee?'Yes':'',e.poop?'Yes':'',e.note||'',e.by||'']);
+  const rows=[['Date','Time','Type','Side','Total (min)','Left (min)','Right (min)','Pee','Poop','Note','Logged by']];
+  for(const e of allEvents()){const m=e.t==='feed'?sideMins(e):{L:0,R:0};rows.push([dayKey(e.at),fmtTime(e.at),e.t==='feed'?'Feed':e.t==='diaper'?'Diaper':'Spit-up',e.t==='feed'?sideName(e.side):'',e.dur||'',m.L?Math.round(m.L):'',m.R?Math.round(m.R):'',e.pee?'Yes':'',e.poop?'Yes':'',e.note||'',e.by||'']);}
   const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
   const filename=(S.settings.name||'baby').split(' ')[0].toLowerCase()+'-log-'+today()+'.csv';
   if(window.claude&&typeof window.claude.use==='function'){try{const dl=await window.claude.use('downloads');if(dl){await dl.save({filename,data:csv});return;}}catch(e){if(e&&e.code==='declined')return;console.warn(e);}}
@@ -688,7 +723,7 @@ $('#printBtn').onclick=()=>{closeSheets();setTimeout(()=>window.print(),150);};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheets();});
 
 // live timers
-setInterval(()=>{if(S.active){const el=$('#activeElapsed');if(el)el.textContent=elapsed(S.active.start);}},1000);
+setInterval(()=>{if(S.active){const el=$('#activeElapsed');if(el)el.textContent=elapsed(S.active.start);const s=$('#activeSides');if(s)s.textContent=liveSides(S.active);}},1000);
 let lastDay=today();
 setInterval(()=>{const t=today();if(t!==lastDay){lastDay=t;if(view.follow)view.day=t;}render();},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();flush();}});
