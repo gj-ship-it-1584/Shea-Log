@@ -1,6 +1,6 @@
 /* Shea's Log — offline cache. Same-origin files are kept locally; Firebase
    traffic passes straight through so sync keeps working. */
-const CACHE = 'shealog-v1';
+const CACHE = 'shealog-v2';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

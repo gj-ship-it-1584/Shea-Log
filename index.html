@@ -427,10 +427,12 @@ const Remote={mode:'local',ready:false,db:null,fs:null,prefix:'',error:null,
     }
     this.mode='local';
   },
+  live:false,liveAt:0,
   subscribe(path,cb){
-    const onErr=e=>{console.warn('sub',path,e);setSync('error');};
-    if(this.mode==='claude')return this.db.doc(path).onSnapshot(s=>cb(s.exists?s.data():null),onErr);
-    if(this.mode==='firebase')return this.fs.doc(this.prefix+path).onSnapshot(s=>cb(s.exists?s.data():null),onErr);
+    const onErr=e=>{console.warn('sub',path,e);this.lastError=e&&e.code;setSync('error');};
+    const wrap=s=>{if(s.metadata&&s.metadata.fromCache===false){const was=this.live;this.live=true;this.liveAt=Date.now();if(!was)setSync(S.pending.length?'pending':'ok');}cb(s.exists?s.data():null);};
+    if(this.mode==='claude')return this.db.doc(path).onSnapshot(wrap,onErr);
+    if(this.mode==='firebase')return this.fs.doc(this.prefix+path).onSnapshot(wrap,onErr);
     return()=>{};
   },
   async merge(path,data){
@@ -443,9 +445,11 @@ let flushing=false,flushTimer=null;
 async function flush(){
   if(flushing||!Remote.ready)return;flushing=true;clearTimeout(flushTimer);
   try{while(S.pending.length){const op=S.pending[0];await Remote.merge(op.path,op.data);S.pending.shift();save();}setSync('ok');}
-  catch(e){console.warn('flush',e);setSync('error');flushTimer=setTimeout(flush,15000);}
+  catch(e){console.warn('flush',e);Remote.lastError=e&&e.code;setSync('error');explainError(e);flushTimer=setTimeout(flush,15000);}
   finally{flushing=false;}
 }
+let explained=false;
+function explainError(e){if(explained)return;const c=e&&e.code;if(c==='permission-denied'){explained=true;toast('Firebase refused the write. In the Firebase console, open Firestore → Rules and publish the rules from SETUP.md.');}else if(c&&c!=='unavailable'){explained=true;toast('Sync error: '+c);}}
 const subs={};
 function ensureSubs(){
   if(!Remote.ready)return;
@@ -459,8 +463,13 @@ function onRemote(path,data){
   if(path==='state/active'){if((data.u||0)>(S.activeU||0)){S.active=data.feed||null;S.activeU=data.u||0;save();render();}return;}
   if(path.startsWith('days/')){if(applyLocal(path.slice(5),data.events))render();}
 }
-function setSync(s){const b=$('#syncBtn');b.dataset.s=Remote.mode==='local'?'local':s;
-  b.title=Remote.mode==='local'?(Remote.error?'Sync error':'Saved on this phone only'):s==='ok'?(S.pending.length?'Syncing…':'Synced'):s==='pending'?'Syncing…':'Offline · will sync';}
+function setSync(s){const b=$('#syncBtn');let st,title;
+  if(Remote.mode==='local'){st='local';title=Remote.error?'Sync error':'Saved on this phone only';}
+  else if(s==='error'){st='error';title='Sync problem · tap for details';}
+  else if(!Remote.live){st='pending';title='Connecting to the shared log…';}
+  else if(s==='pending'||S.pending.length){st='pending';title='Syncing…';}
+  else{st='ok';title='Synced';}
+  b.dataset.s=st;b.title=title;Remote.status=st;}
 
 /* ---------- render ---------- */
 const ICON={drop:'<svg class="i"><use href="#i-drop"/></svg>',poop:'<svg class="i"><use href="#i-poop"/></svg>',spit:'<svg class="i"><use href="#i-spit"/></svg>'};
@@ -584,38 +593,51 @@ function renderSyncSect(){
   }else if(!hasFb){
     h+='<div class="kv"><span>Status</span><span class="pill warn">This phone only</span></div><p class="hint">This copy could not reach its sync service. Entries are saved here and sync when it reconnects.</p>';
   }else if(Remote.mode==='firebase'){
-    h+='<div class="kv"><span>Status</span><span class="pill ok">Shared · Firebase</span></div>'+
-      '<div class="kv"><span>Family code</span><span class="code">'+esc(S.fam)+'</span></div>'+
-      '<div class="rowb" style="margin-top:6px"><button class="btn sm primary" id="shareInvite">Send invite link</button><button class="btn sm" id="copyInvite">Copy link</button></div>'+
-      '<p class="hint">Text or AirDrop the link to your partner. Opening it once joins their phone to this log.</p>'+
-      '<details style="margin-top:12px"><summary class="hint" style="cursor:pointer">Advanced</summary>'+
-      '<label class="f">Join a different family code</label><div class="rowb" style="margin-top:0"><input id="joinCode" placeholder="paste code" autocomplete="off"><button class="btn sm" id="joinBtn" style="flex:0 0 auto;padding:0 16px">Join</button></div>'+
+    const live=Remote.live,err=Remote.status==='error';
+    h+='<div class="kv"><span>Status</span><span class="pill '+(err?'warn':live?'ok':'warn')+'">'+(err?'Problem: '+esc(Remote.lastError||'unknown'):live?'Connected · live':'Connecting…')+'</span></div>'+
+      (live?'<p class="hint">Last update from the shared log '+fmtTime(Remote.liveAt)+'.</p>':'<p class="hint">Still connecting after a minute? In the Firebase console make sure the <b>Firestore database is created</b> and the <b>Rules</b> from SETUP.md are published.</p>')+
+      '<label class="f">Family code · both phones must match</label><div class="code" style="font-size:15px;padding:10px 12px;text-align:center;letter-spacing:.04em">'+esc(S.fam)+'</div>'+
+      '<div class="rowb" style="margin-top:10px"><button class="btn sm primary" id="shareInvite">Send invite link</button><button class="btn sm" id="copyInvite">Copy link</button></div>'+
+      '<p class="hint"><b>On iPhone, add to the home screen from the invite link</b> (open it in Safari, then Share → Add to Home Screen). Home-screen apps keep their own settings, separate from Safari, and the link carries the code with it.</p>'+
+      '<label class="f">Use your partner’s code instead</label><div class="rowb" style="margin-top:0"><input id="joinCode" placeholder="paste their family code" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="btn sm" id="joinBtn" style="flex:0 0 auto;padding:0 16px">Switch</button></div>'+
+      '<details style="margin-top:14px"><summary class="hint" style="cursor:pointer">Advanced</summary>'+
       '<div class="rowb"><button class="btn sm danger" id="disconnectBtn">Disconnect this phone</button></div></details>';
   }else{
     h+='<div class="kv"><span>Status</span><span class="pill warn">This phone only</span></div>'+
       (Remote.error?'<p class="hint" style="color:var(--bad)">Could not connect: '+esc(Remote.error)+'</p>':'')+
       '<p class="hint">Sharing runs on a free Google Firebase database. One of you sets it up once (see <code>SETUP.md</code>); the other just opens an invite link.</p>'+
       '<label class="f">Paste your Firebase config</label><textarea id="fbcfg" placeholder=\'const firebaseConfig = {\n  apiKey: "…",\n  projectId: "…",\n  …\n};\'></textarea>'+
-      '<div class="rowb" style="margin-top:10px"><button class="btn sm primary" id="connectBtn">Connect</button></div>'+
-      '<p class="hint">Already set up by your partner? Open the invite link they sent instead.</p>';
+      '<label class="f">Family code (only if your partner already has one)</label><input id="famIn" placeholder="leave blank to start a new shared log" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">'+
+      '<div class="rowb" style="margin-top:12px"><button class="btn sm primary" id="connectBtn">Connect</button></div>'+
+      '<p class="hint">Already set up by your partner? Open the invite link they sent instead, then add to the home screen from that page.</p>';
   }
   el.innerHTML=h;
   const on=(id,fn)=>{const b=$('#'+id);if(b)b.onclick=fn;};
-  on('connectBtn',()=>{try{const cfg=parseCfg($('#fbcfg').value);S.fbcfg=cfg;if(!S.fam)S.fam=genCode();save();location.hash='';location.reload();}catch(e){toast(e.message);}});
+  on('connectBtn',()=>{try{const cfg=parseCfg($('#fbcfg').value);const fam=($('#famIn').value||'').trim();if(fam&&fam.length<16){toast('That family code looks too short');return;}S.fbcfg=cfg;S.fam=fam||S.fam||genCode();S.appliedHash=inviteHash();save();location.hash=inviteHash();location.reload();}catch(e){toast(e.message);}});
   on('shareInvite',async()=>{const link=inviteLink();if(navigator.share){try{await navigator.share({title:(S.settings.name||'Baby')+"'s Log",text:'Join '+(S.settings.name||'the baby').split(' ')[0]+"'s feeding log: ",url:link});return;}catch(e){if(e.name==='AbortError')return;}}copyText(link);});
   on('copyInvite',()=>copyText(inviteLink()));
-  on('joinBtn',()=>{const c=($('#joinCode').value||'').trim();if(c.length<16){toast('That code looks too short');return;}S.fam=c;S.days={};S.pending=[];S.active=null;S.activeU=0;save();location.reload();});
-  on('disconnectBtn',()=>{if(confirm('Stop syncing this phone? Entries stay in the shared log; this phone keeps its own copy.')){S.fbcfg=null;S.fam=null;save();location.reload();}});
+  on('joinBtn',()=>{const c=($('#joinCode').value||'').trim();if(c.length<16){toast('That code looks too short');return;}if(c===S.fam){toast('This phone already uses that code');return;}S.fam=c;S.days={};S.pending=[];S.active=null;S.activeU=0;S.appliedHash=inviteHash();save();location.hash=inviteHash();location.reload();});
+  on('disconnectBtn',()=>{if(confirm('Stop syncing this phone? Entries stay in the shared log; this phone keeps its own copy.')){S.fbcfg=null;S.fam=null;save();history.replaceState(null,'',location.pathname);location.reload();}});
 }
 function parseCfg(txt){const cfg={};const re=/["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g;let m;while((m=re.exec(txt)))cfg[m[1]]=m[2];if(!cfg.apiKey||!cfg.projectId)throw new Error('Could not find apiKey and projectId in what you pasted');return cfg;}
 function genCode(){const a='abcdefghjkmnpqrstuvwxyz23456789';let s='';const r=new Uint32Array(24);if(window.crypto&&crypto.getRandomValues)crypto.getRandomValues(r);else for(let i=0;i<24;i++)r[i]=Math.random()*1e9;for(let i=0;i<24;i++)s+=a[r[i]%a.length];return s;}
 function b64u(s){return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function unb64u(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return decodeURIComponent(escape(atob(s)));}
-function inviteLink(){return location.origin+location.pathname+'#join='+encodeURIComponent(S.fam)+'&cfg='+b64u(JSON.stringify(S.fbcfg));}
+function inviteHash(){return '#join='+encodeURIComponent(S.fam)+'&cfg='+b64u(JSON.stringify(S.fbcfg));}
+function inviteLink(){return location.origin+location.pathname+inviteHash();}
 async function copyText(t){try{await navigator.clipboard.writeText(t);toast('Copied');}catch(e){prompt('Copy this link:',t);}}
+/* The invite hash stays in the address bar on purpose: iPhone home-screen apps keep
+   their own storage, so the bookmark itself has to carry the family code. A hash is
+   applied once; after that the phone's own settings win. */
 function handleJoinHash(){
-  if(!location.hash.startsWith('#join='))return false;
-  try{const p=new URLSearchParams(location.hash.slice(1));const fam=p.get('join'),cfg=p.get('cfg');if(fam&&cfg){S.fam=fam;S.fbcfg=JSON.parse(unb64u(cfg));save();history.replaceState(null,'',location.pathname);return true;}}catch(e){console.warn(e);toast('That invite link is damaged');}
+  const h=location.hash;
+  if(!h.startsWith('#join='))return false;
+  if(S.appliedHash===h)return false;
+  try{const p=new URLSearchParams(h.slice(1));const fam=p.get('join'),cfg=p.get('cfg');
+    if(fam&&cfg&&fam.length>=16){const parsed=JSON.parse(unb64u(cfg));if(!parsed.apiKey||!parsed.projectId)throw new Error('bad cfg');
+      if(S.fam&&S.fam!==fam){S.days={};S.pending=[];S.active=null;S.activeU=0;}
+      S.fam=fam;S.fbcfg=parsed;S.appliedHash=h;save();return true;}}
+  catch(e){console.warn(e);toast('That invite link is damaged. Ask for a fresh one.');}
   history.replaceState(null,'',location.pathname);return false;
 }
 
@@ -679,7 +701,8 @@ const joined=handleJoinHash();
 view.day=today();
 render();
 Remote.init().then(()=>{setSync(S.pending.length?'pending':'ok');ensureSubs();flush();
-  if(joined&&Remote.mode==='firebase')toast("You're in · this phone now shares the log");
+  if(joined&&Remote.mode==='firebase')toast("You're in. Now Share → Add to Home Screen from this page.");
+  if(Remote.mode==='firebase')setTimeout(()=>{if(!Remote.live)setSync('pending');},20000);
   try{if(!localStorage.getItem('shealog.tip1')){localStorage.setItem('shealog.tip1','1');setTimeout(()=>toast('Tip: hold any button to log it for an earlier time'),1500);}}catch(e){}
 });
 })();
