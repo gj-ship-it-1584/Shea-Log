@@ -71,6 +71,7 @@ That's it. Whatever either of you taps shows up on the other phone within a seco
   - **Press and hold** any button in the bottom bar (Left, Pee, Spit-up…) to open the form with that type already chosen.
   - Tap **+ Add an entry** at the bottom of the log (this also works on past days).
   In the form, tap a quick chip such as **30 min ago** or **2 hr ago**, or set the exact time with the picker. The line under the picker confirms the time in plain words before you save.
+- **Photos of a diaper** (or spit-up): right after you tap Pee or Poop, the confirmation offers **Add photo**; iPhone then asks Take Photo or Photo Library. You can also open any diaper entry and tap **Add photo**. Photos are shrunk to about 150 KB and kept in the same shared database, so both phones can see them and nothing extra needs setting up. Tap a thumbnail to view it full-screen or delete it.
 - **Past days**: the ‹ › arrows move by day. Tap the date label to jump back to today.
 - **Pediatrician**: **Share summary** sends the day's counts as a text; **⚙︎ → Download CSV** gives the full history as a spreadsheet.
 - **Night feeds**: the app follows your phone's dark mode, so it stays dim at 3 a.m.
