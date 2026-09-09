@@ -65,6 +65,8 @@ That's it. Whatever either of you taps shows up on the other phone within a seco
 ## Everyday use
 
 - **Feeds**: tap Left or Right when she latches. A timer starts and shows on both phones. Tap **Switch to Right** if she changes sides, **End feed** when done. If you forget to end it, just tap the row and type the minutes, or leave the duration blank; the sheet never tracked minutes anyway.
+- **Cluster feeds count as one.** If a latch starts within 10 minutes of the previous one ending, the app treats them as one feeding session: the "since last feed" clock runs from the first latch, and the minutes per side add up only nursing time, so a burp break between 15 min Right and 15 min Left still reads "R 15 · L 15". Linked latches are joined by a line in the log, and the newest one carries the session total. Change the 10 minutes in Settings → Feeding sessions.
+- **Your names.** In Settings pick Mom or Dad and type your name. Entries show the name on both phones, including ones logged before you typed it.
 - **Made a mistake?** Every quick tap shows an **Undo** button for six seconds. After that, tap the row to edit or delete it.
 - **Forgot to log it live?** Three ways, all ending in the same form:
   - Tap **Earlier** in the bottom bar.

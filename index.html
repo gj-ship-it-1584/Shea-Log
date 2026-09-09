@@ -152,8 +152,14 @@ label.f{display:block;font-size:11.5px;letter-spacing:.09em;text-transform:upper
 .ic.feed{background:var(--feed-bg);color:var(--feed-ink)} .ic.pee{background:var(--pee-bg);color:var(--pee-ink)} .ic.poop{background:var(--poop-bg);color:var(--poop-ink)} .ic.spit{background:var(--spit-bg);color:var(--spit-ink)}
 .ic.both{background:linear-gradient(135deg,var(--pee-bg) 50%,var(--poop-bg) 50%);color:var(--poop-ink)}
 .row .title{font-weight:700;font-size:15px;line-height:1.25}
-.row .meta{font-size:12.5px;color:var(--muted);margin-top:2px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{font-size:12.5px;color:var(--muted);margin-top:2px;font-weight:500;line-height:1.35}
 .row .live{color:var(--feed);font-weight:700}
+.row .ses-sum{color:var(--feed-ink);font-weight:700}
+.row.ses::after{content:"";position:absolute;left:105px;width:2px;background:var(--feed);opacity:.35;border-radius:1px}
+.row.ses-top::after{top:calc(50% + 22px);bottom:0}
+.row.ses-mid::after{top:0;bottom:0}
+.row.ses-bot::after{top:0;bottom:calc(50% + 22px)}
+.row.ses .ic{position:relative;z-index:1}
 .tl .none{padding:26px 18px 30px;text-align:center;color:var(--muted);font-size:14px;font-weight:500}
 .addrow{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:14px;color:var(--accent);font-weight:700;font-size:14px;border-top:1px solid var(--hair)}
 .addrow:active{background:var(--press)}
@@ -361,7 +367,16 @@ ol.steps b{color:var(--text)}
     <input type="date" id="stDob">
     <label class="f">I am</label>
     <div class="seg" id="stMe"><button data-v="Mom">Mom</button><button data-v="Dad">Dad</button><button data-v="">Other</button></div>
-    <input id="stMeOther" placeholder="Name" style="margin-top:8px" hidden autocomplete="off">
+    <label class="f">Your name (shown in the log)</label>
+    <input id="stWho" placeholder="e.g. Jordan" autocomplete="given-name" autocapitalize="words">
+    <p class="hint">Both phones show this name on the entries you log, including ones already logged.</p>
+
+    <div class="sect">
+      <h3>Feeding sessions</h3>
+      <label class="f">Link a latch to the previous one if it starts within</label>
+      <div class="rowb" style="margin-top:0;align-items:center;gap:12px"><input type="number" id="stGap" inputmode="numeric" min="0" max="90" style="width:90px;text-align:center"><span class="hint" style="margin:0">minutes of it ending</span></div>
+      <p class="hint">Linked latches count as one feed: the "since last feed" clock runs from the first latch, and minutes per side add up nursing time only, not the breaks.</p>
+    </div>
 
     <div class="sect" id="syncSect"></div>
 
@@ -404,8 +419,10 @@ const DAY=86400000;
 const FEED_GAP=3*3600000; // the progress bar fills over three hours
 
 /* ---------- state ---------- */
-function defaults(){return{days:{},active:null,activeU:0,settings:{name:'Shea Ainsley',dob:'2026-09-05',me:''},pending:[],fam:null,fbcfg:null};}
-function load(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(j){const d=defaults();return Object.assign(d,j,{settings:Object.assign(d.settings,j.settings||{})});}}catch(e){}return defaults();}
+function defaults(){return{days:{},active:null,activeU:0,settings:{name:'Shea Ainsley',dob:'2026-09-05',me:'',role:'',who:'',gap:10},pending:[],fam:null,fbcfg:null,people:{}};}
+function load(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(j){const d=defaults();const s=Object.assign(d,j,{settings:Object.assign(d.settings,j.settings||{})});
+  if(!s.settings.role&&!s.settings.who&&s.settings.me){if(['Mom','Dad'].includes(s.settings.me))s.settings.role=s.settings.me;else s.settings.who=s.settings.me;}
+  return s;}}catch(e){}return defaults();}
 let S=load();
 function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
 const view={day:null,follow:true};
@@ -424,7 +441,10 @@ function elapsed(ms){const s=Math.max(0,Math.floor((Date.now()-ms)/1000));const 
 function toLocalInput(ms){const d=new Date(ms);return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'T'+pad2(d.getHours())+':'+pad2(d.getMinutes());}
 function ageText(){const dob=S.settings.dob;if(!dob)return'';const days=Math.floor((dayStart(today())-dayStart(dob))/DAY);if(isNaN(days)||days<0)return'';if(days===0)return'Born today';if(days<21)return days+(days===1?' day old':' days old');const w=Math.floor(days/7),d=days%7;return w+(w===1?' week':' weeks')+(d?' '+d+(d===1?' day':' days'):'')+' old';}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function me(){return S.settings.me||'';}
+/* Entries record the role (Mom/Dad) when one is chosen, and a shared name map turns
+   it into the real name on every phone, so old entries follow a rename too. */
+function me(){return S.settings.role||S.settings.who||'';}
+function who(by){if(!by)return'';return S.people[by]||by;}
 const SIDE={L:'Left',R:'Right'};
 function sideName(s){if(!s)return'';return s.split('').map(c=>SIDE[c]||c).join(' → ');}
 /* Per-side timing. A feed carries segs:[{s:'L'|'R',sec}] in nursing order; dur is the
@@ -434,7 +454,23 @@ function sideMins(e){const o={L:0,R:0};const g=segsOf(e);if(g)for(const s of g)o
 function mins(sec){return Math.max(1,Math.round(sec/60));}
 function fmtSplit(e){const g=segsOf(e);if(!g||g.length<2)return e.dur?e.dur+' min':'';return segTotal(g)+' min · '+g.map(s=>s.s+' '+mins(s.sec)).join(' · ');}
 function segTotal(g){return g.reduce((a,s)=>a+mins(s.sec),0);} // sum of rounded parts, so the total always matches what's shown
-function liveSides(a){const parts=(a.segs||[]).map(g=>SIDE[g.s]+' '+mins(g.sec)+'m');parts.push(SIDE[a.side]+' '+elapsed(a.segStart||a.start));return parts.join(' → ');}
+function liveSides(a){const parts=(a.segs||[]).map(g=>SIDE[g.s]+' '+mins(g.sec)+'m');parts.push(SIDE[a.side]+' '+elapsed(a.segStart||a.start));return (activePrior?activePrior+' → ':'')+parts.join(' → ');}
+let activePrior='';
+
+/* Feeding sessions. A latch that starts within `gap` minutes of the previous one
+   ending belongs to the same session: the clock runs from the first latch, and the
+   per-side minutes add up only the nursing time, so burp breaks drop out. A latch
+   with no recorded minutes is assumed to have lasted ASSUMED_MIN for linking only. */
+const ASSUMED_MIN=20;
+function feedEnd(e,now){if(S.active&&S.active.id===e.id)return now;const g=segsOf(e);const sec=g?g.reduce((a,s)=>a+s.sec,0):(e.dur?e.dur*60:ASSUMED_MIN*60);return e.at+sec*1000;}
+function gapMs(){const g=parseInt(S.settings.gap,10);return (isNaN(g)?10:g)*60000;}
+function sessions(feeds,now){now=now||Date.now();const out=[];
+  for(const e of feeds){const last=out[out.length-1];if(last&&e.at-last.end<=gapMs()){last.feeds.push(e);last.end=Math.max(last.end,feedEnd(e,now));}else out.push({start:e.at,end:feedEnd(e,now),feeds:[e]});}
+  for(const s of out){const m={L:0,R:0};let sides='';for(const e of s.feeds){const mm=sideMins(e);m.L+=mm.L;m.R+=mm.R;for(const c of (e.side||'')){if(sides[sides.length-1]!==c)sides+=c;}}
+    s.L=Math.round(m.L);s.R=Math.round(m.R);s.total=s.L+s.R;s.sides=sides;s.parts=s.feeds.length;s.active=!!(S.active&&s.feeds.some(e=>e.id===S.active.id));}
+  return out;}
+function fmtSession(s){if(!s.total)return s.parts>1?s.parts+' latches':'';const both=s.L&&s.R;const order=[...new Set(s.sides.split(''))];return s.total+' min'+(both?' · '+order.map(c=>c+' '+s[c]).join(' · '):'')+(s.parts>1?' · '+s.parts+' latches':'');}
+function sessionIndex(feeds){const idx=new Map();for(const s of sessions(feeds))s.feeds.forEach((e,i)=>idx.set(e.id,{s,i}));return idx;}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 /* ---------- events ---------- */
@@ -530,7 +566,7 @@ function explainError(e){if(explained)return;const c=e&&e.code;if(c==='permissio
 const subs={};
 function ensureSubs(){
   if(!Remote.ready)return;
-  const want=new Set(['state/active','days/'+today(),'days/'+shiftDay(today(),-1)]);
+  const want=new Set(['state/active','state/people','days/'+today(),'days/'+shiftDay(today(),-1)]);
   if(view.day!==today())want.add('days/'+view.day);
   for(const p of Object.keys(subs))if(!want.has(p)){subs[p]();delete subs[p];}
   for(const p of want)if(!subs[p])subs[p]=Remote.subscribe(p,data=>onRemote(p,data));
@@ -538,6 +574,7 @@ function ensureSubs(){
 function onRemote(path,data){
   if(!data)return;
   if(path==='state/active'){if((data.u||0)>(S.activeU||0)){S.active=data.feed||null;S.activeU=data.u||0;save();render();}return;}
+  if(path==='state/people'){const p={};for(const [k,v] of Object.entries(data))if(k!=='u'&&typeof v==='string')p[k]=v;S.people=Object.assign({},S.people,p);save();render();return;}
   if(path.startsWith('days/')){if(applyLocal(path.slice(5),data.events))render();}
 }
 function setSync(s){const b=$('#syncBtn');let st,title;
@@ -562,25 +599,32 @@ function render(){
   $('#logTitle').textContent=isToday?'Today':fmtDate(view.day);
 
   const all=allEvents();const rev=all.slice().reverse();const now=Date.now();
-  const lastFeed=rev.find(e=>e.t==='feed'),lastWet=rev.find(e=>e.t==='diaper'&&e.pee),lastDirty=rev.find(e=>e.t==='diaper'&&e.poop);
+  const lastWet=rev.find(e=>e.t==='diaper'&&e.pee),lastDirty=rev.find(e=>e.t==='diaper'&&e.poop);
   const a=S.active;
+  const allFeeds=all.filter(e=>e.t==='feed');const ses=sessions(allFeeds,now);const lastSes=ses[ses.length-1]||null;
+  const sesIdx=new Map();for(const s of ses)s.feeds.forEach((e,i)=>sesIdx.set(e.id,{s,i}));
+  activePrior=(a&&lastSes&&lastSes.active)?lastSes.feeds.filter(e=>e.id!==a.id).flatMap(e=>segsOf(e)||[]).map(g=>SIDE[g.s]+' '+mins(g.sec)+'m').join(' → '):'';
   const de=dayEvents(view.day);
-  const n={feeds:de.filter(e=>e.t==='feed').length,L:de.filter(e=>e.t==='feed'&&(e.side||'').includes('L')).length,R:de.filter(e=>e.t==='feed'&&(e.side||'').includes('R')).length,wet:de.filter(e=>e.t==='diaper'&&e.pee).length,dirty:de.filter(e=>e.t==='diaper'&&e.poop).length,spit:de.filter(e=>e.t==='spit').length};
+  const daySes=ses.filter(s=>dayKey(s.start)===view.day);
+  const latches=de.filter(e=>e.t==='feed').length;
+  const n={feeds:daySes.length,L:de.filter(e=>e.t==='feed'&&(e.side||'').includes('L')).length,R:de.filter(e=>e.t==='feed'&&(e.side||'').includes('R')).length,wet:de.filter(e=>e.t==='diaper'&&e.pee).length,dirty:de.filter(e=>e.t==='diaper'&&e.poop).length,spit:de.filter(e=>e.t==='spit').length};
   const tot=de.filter(e=>e.t==='feed'&&e.dur).reduce((s,e)=>s+e.dur,0);
   const sm=de.filter(e=>e.t==='feed').reduce((o,e)=>{const m=sideMins(e);o.L+=m.L;o.R+=m.R;return o;},{L:0,R:0});
-  const feedExtra=(sm.L||sm.R)?'L '+Math.round(sm.L)+'m · R '+Math.round(sm.R)+'m':'L '+n.L+' · R '+n.R;
+  const feedExtra=((sm.L||sm.R)?'L '+Math.round(sm.L)+'m · R '+Math.round(sm.R)+'m':'L '+n.L+' · R '+n.R)+(latches>n.feeds?' · '+latches+' latches':'');
 
   // hero
   const hero=$('#hero');
   if(!isToday){hero.hidden=true;hero.innerHTML='';}
   else if(a){
     hero.hidden=false;hero.className='hero live';
-    hero.innerHTML='<div class="eyebrow"><i class="pulse"></i>Feeding · '+SIDE[a.side]+' side'+(a.by?' · '+esc(a.by):'')+'</div><div class="big num" id="activeElapsed">'+elapsed(a.start)+'</div><div class="sub num"><span id="activeSides">'+liveSides(a)+'</span> · started '+fmtTime(a.start)+'</div><div class="actions"><button id="switchSide">Switch to '+SIDE[a.side==='L'?'R':'L']+'</button><button class="primary" id="endFeed">End feed</button></div>';
+    const part=(lastSes&&lastSes.active&&lastSes.parts>1)?' · latch '+lastSes.parts:'';
+    hero.innerHTML='<div class="eyebrow"><i class="pulse"></i>Feeding · '+SIDE[a.side]+' side'+part+(a.by?' · '+esc(who(a.by)):'')+'</div><div class="big num" id="activeElapsed">'+elapsed(a.start)+'</div><div class="sub num"><span id="activeSides">'+liveSides(a)+'</span> · session began '+fmtTime(lastSes&&lastSes.active?lastSes.start:a.start)+'</div><div class="actions"><button id="switchSide">Switch to '+SIDE[a.side==='L'?'R':'L']+'</button><button class="primary" id="endFeed">End feed</button></div>';
     $('#switchSide').onclick=switchSide;$('#endFeed').onclick=()=>endFeed(false);
-  }else if(lastFeed){
+  }else if(lastSes){
     hero.hidden=false;hero.className='hero';
-    const gap=now-lastFeed.at;const pct=Math.min(100,Math.round(gap/FEED_GAP*100));const warn=gap>FEED_GAP;
-    hero.innerHTML='<div class="eyebrow"><i class="k feed"></i>Since last feed</div><div class="big num'+(warn?' warn':'')+'">'+agoBig(lastFeed.at)+'</div><div class="sub">'+sideName(lastFeed.side)+(fmtSplit(lastFeed)?' · '+fmtSplit(lastFeed):'')+' · '+fmtTime(lastFeed.at)+(dayKey(lastFeed.at)!==t?' '+fmtDate(dayKey(lastFeed.at)):'')+(lastFeed.by?' · '+esc(lastFeed.by):'')+'</div><div class="bar"><span class="'+(warn?'warn':'')+'" style="width:'+pct+'%"></span></div>';
+    const gap=now-lastSes.start;const pct=Math.min(100,Math.round(gap/FEED_GAP*100));const warn=gap>FEED_GAP;
+    const by=lastSes.feeds[lastSes.feeds.length-1].by;
+    hero.innerHTML='<div class="eyebrow"><i class="k feed"></i>Since last feed</div><div class="big num'+(warn?' warn':'')+'">'+agoBig(lastSes.start)+'</div><div class="sub">'+sideName(lastSes.sides)+(fmtSession(lastSes)?' · '+fmtSession(lastSes):'')+' · '+fmtTime(lastSes.start)+(dayKey(lastSes.start)!==t?' '+fmtDate(dayKey(lastSes.start)):'')+(by?' · '+esc(who(by)):'')+'</div><div class="bar"><span class="'+(warn?'warn':'')+'" style="width:'+pct+'%"></span></div>';
   }else{
     hero.hidden=false;hero.className='hero';
     hero.innerHTML='<div class="eyebrow"><i class="k feed"></i>Since last feed</div><div class="empty">Nothing logged yet. Tap <b>L</b> or <b>R</b> below when '+esc(first)+' latches, or <b>Earlier</b> to backfill.</div>';
@@ -601,14 +645,17 @@ function render(){
   if(!de.length){wrap.innerHTML='<div class="none">'+(isToday?'No entries yet today.':'No entries on this day.')+'</div>';}
   else{
     wrap.innerHTML=de.slice().reverse().map(e=>{
-      let ic,title,meta=[];
-      if(e.t==='feed'){const s=e.side||'';ic='<div class="ic feed">'+(s.length>1?s.replace(/L/g,'L').slice(0,2):s||'?')+'</div>';title='Feed · '+sideName(s);
-        if(a&&a.id===e.id)meta.push('<span class="live">In progress</span>');else if(fmtSplit(e))meta.push(fmtSplit(e));}
+      let ic,title,meta=[],cls='';
+      if(e.t==='feed'){const s=e.side||'';ic='<div class="ic feed">'+(s.length>1?s.slice(0,2):s||'?')+'</div>';title='Feed · '+sideName(s);
+        if(a&&a.id===e.id)meta.push('<span class="live">In progress</span>');else if(fmtSplit(e))meta.push(fmtSplit(e));
+        const si=sesIdx.get(e.id);
+        if(si&&si.s.parts>1){const top=si.i===si.s.parts-1,bot=si.i===0;cls=' ses '+(top?'ses-top':bot?'ses-bot':'ses-mid');
+          if(top&&!si.s.active)meta.push('<span class="ses-sum">Session '+fmtSession(si.s)+'</span>');else if(!top)meta.push('<span class="ses-sum">same session</span>');}}
       else if(e.t==='diaper'){const both=e.pee&&e.poop;ic='<div class="ic '+(both?'both':e.pee?'pee':'poop')+'">'+(e.poop&&!e.pee?ICON.poop:ICON.drop)+'</div>';title=both?'Wet + dirty':e.pee?'Wet diaper':'Dirty diaper';}
       else{ic='<div class="ic spit">'+ICON.spit+'</div>';title='Spit-up';}
       if(e.photos&&e.photos.length)meta.push('<svg class="i cam"><use href="#i-cam"/></svg>'+e.photos.length);
-      if(e.note)meta.push(esc(e.note));if(e.by)meta.push(esc(e.by));
-      return '<button class="row" data-id="'+e.id+'"><div class="t num">'+fmtTime(e.at).replace(/ (AM|PM)/,'<small>$1</small>')+'</div>'+ic+'<div><div class="title">'+title+'</div>'+(meta.length?'<div class="meta">'+meta.join(' · ')+'</div>':'')+'</div></button>';
+      if(e.note)meta.push(esc(e.note));if(e.by)meta.push(esc(who(e.by)));
+      return '<button class="row'+cls+'" data-id="'+e.id+'"><div class="t num">'+fmtTime(e.at).replace(/ (AM|PM)/,'<small>$1</small>')+'</div>'+ic+'<div><div class="title">'+title+'</div>'+(meta.length?'<div class="meta">'+meta.join(' · ')+'</div>':'')+'</div></button>';
     }).join('');
     wrap.querySelectorAll('.row').forEach(r=>r.onclick=()=>{const ev=(S.days[view.day]||{events:{}}).events[r.dataset.id];if(ev)openEditor(ev);});
   }
@@ -693,14 +740,18 @@ function saveEditor(){
 /* ---------- settings ---------- */
 function openSettings(){
   $('#stName').value=S.settings.name||'';$('#stDob').value=S.settings.dob||'';
-  const m=S.settings.me||'';const std=['Mom','Dad'].includes(m);
-  seg($('#stMe'),std?m:'',v=>{$('#stMeOther').hidden=v!=='';if(v==='')$('#stMeOther').focus();});
-  $('#stMeOther').hidden=std;$('#stMeOther').value=std?'':m;
+  const role=S.settings.role||'';
+  seg($('#stMe'),role,v=>{const w=$('#stWho');if(!w.value.trim()&&v&&S.people[v])w.value=S.people[v];w.focus();});
+  $('#stWho').value=S.settings.who||(role&&S.people[role])||'';
+  $('#stGap').value=isNaN(parseInt(S.settings.gap,10))?10:S.settings.gap;
   renderSyncSect();$('#settings').hidden=false;
 }
 function saveSettings(){
   S.settings.name=$('#stName').value.trim()||'Baby';S.settings.dob=$('#stDob').value;
-  const p=$('#stMe [aria-pressed="true"]');S.settings.me=p&&p.dataset.v?p.dataset.v:$('#stMeOther').value.trim();
+  const p=$('#stMe [aria-pressed="true"]');const role=p?p.dataset.v:'';const whoName=$('#stWho').value.trim();
+  S.settings.role=role;S.settings.who=whoName;S.settings.me=role||whoName;
+  if(role&&whoName&&S.people[role]!==whoName){S.people[role]=whoName;push('state/people',{[role]:whoName,u:Date.now()});}
+  const g=parseInt($('#stGap').value,10);S.settings.gap=isNaN(g)||g<0?10:Math.min(90,g);
   save();closeSheets();render();
 }
 function renderSyncSect(){
@@ -765,15 +816,17 @@ function summaryText(){
   const feeds=de.filter(e=>e.t==='feed'),wet=de.filter(e=>e.t==='diaper'&&e.pee).length,dirty=de.filter(e=>e.t==='diaper'&&e.poop).length,spit=de.filter(e=>e.t==='spit').length;
   const tot=feeds.reduce((s,e)=>s+(e.dur||0),0);
   const sm=feeds.reduce((o,e)=>{const m=sideMins(e);o.L+=m.L;o.R+=m.R;return o;},{L:0,R:0});
+  const nSes=sessions(allEvents().filter(e=>e.t==='feed')).filter(s=>dayKey(s.start)===view.day).length;
   return [name+' · '+fmtDate(view.day)+(view.day===today()&&ageText()?' · '+ageText():''),
-    'Feeds: '+feeds.length+(tot?' · '+tot+' min'+((sm.L||sm.R)?' (L '+Math.round(sm.L)+' / R '+Math.round(sm.R)+')':''):''),
+    'Feeds: '+nSes+(feeds.length>nSes?' ('+feeds.length+' latches)':'')+(tot?' · '+tot+' min'+((sm.L||sm.R)?' (L '+Math.round(sm.L)+' / R '+Math.round(sm.R)+')':''):''),
     'Wet: '+wet+' · Dirty: '+dirty+' · Spit-up: '+spit,'',
-    ...de.map(e=>fmtTime(e.at)+'  '+(e.t==='feed'?'Feed '+sideName(e.side)+(fmtSplit(e)?' · '+fmtSplit(e):''):e.t==='diaper'?(e.pee&&e.poop?'Wet + dirty':e.pee?'Wet':'Dirty'):'Spit-up')+(e.note?' – '+e.note:''))].join('\n');
+    ...de.map(e=>fmtTime(e.at)+'  '+(e.t==='feed'?'Feed '+sideName(e.side)+(fmtSplit(e)?' · '+fmtSplit(e):''):e.t==='diaper'?(e.pee&&e.poop?'Wet + dirty':e.pee?'Wet':'Dirty'):'Spit-up')+(e.note?' – '+e.note:'')+(e.by?' ('+who(e.by)+')':''))].join('\n');
 }
 async function shareSummary(){const text=summaryText();if(navigator.share){try{await navigator.share({text});return;}catch(e){if(e.name==='AbortError')return;}}copyText(text);}
 async function exportCsv(){
-  const rows=[['Date','Time','Type','Side','Total (min)','Left (min)','Right (min)','Pee','Poop','Photos','Note','Logged by']];
-  for(const e of allEvents()){const m=e.t==='feed'?sideMins(e):{L:0,R:0};rows.push([dayKey(e.at),fmtTime(e.at),e.t==='feed'?'Feed':e.t==='diaper'?'Diaper':'Spit-up',e.t==='feed'?sideName(e.side):'',e.dur||'',m.L?Math.round(m.L):'',m.R?Math.round(m.R):'',e.pee?'Yes':'',e.poop?'Yes':'',(e.photos||[]).length||'',e.note||'',e.by||'']);}
+  const rows=[['Date','Time','Type','Side','Total (min)','Left (min)','Right (min)','Session start','Pee','Poop','Photos','Note','Logged by']];
+  const all=allEvents();const idx=sessionIndex(all.filter(e=>e.t==='feed'));
+  for(const e of all){const m=e.t==='feed'?sideMins(e):{L:0,R:0};const si=idx.get(e.id);rows.push([dayKey(e.at),fmtTime(e.at),e.t==='feed'?'Feed':e.t==='diaper'?'Diaper':'Spit-up',e.t==='feed'?sideName(e.side):'',e.dur||'',m.L?Math.round(m.L):'',m.R?Math.round(m.R):'',si&&si.s.parts>1?fmtTime(si.s.start):'',e.pee?'Yes':'',e.poop?'Yes':'',(e.photos||[]).length||'',e.note||'',who(e.by)||'']);}
   const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
   const filename=(S.settings.name||'baby').split(' ')[0].toLowerCase()+'-log-'+today()+'.csv';
   if(window.claude&&typeof window.claude.use==='function'){try{const dl=await window.claude.use('downloads');if(dl){await dl.save({filename,data:csv});return;}}catch(e){if(e&&e.code==='declined')return;console.warn(e);}}
