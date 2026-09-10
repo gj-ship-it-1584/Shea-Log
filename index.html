@@ -247,8 +247,19 @@ label.f{display:block;font-size:11.5px;letter-spacing:.09em;text-transform:upper
 ol.steps{padding-left:20px;margin:6px 0;font-size:14px;color:var(--muted);font-weight:500} ol.steps li{margin:4px 0}
 ol.steps b{color:var(--text)}
 
-#toast{position:fixed;left:50%;bottom:calc(176px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;background:var(--text);color:var(--bg);padding:11px 12px 11px 18px;border-radius:999px;display:flex;align-items:center;gap:14px;font-size:14px;font-weight:600;box-shadow:0 12px 30px -8px rgba(0,0,0,.4);max-width:calc(100% - 32px);animation:up .2s ease-out}
-#toast button{font-weight:800;color:var(--bg);background:rgba(127,127,127,.28);padding:6px 13px;border-radius:999px}
+:root{--toast-b:172px}
+#toast{position:fixed;left:50%;bottom:calc(var(--toast-b) + env(safe-area-inset-bottom));transform:translateX(-50%);width:calc(100% - 24px);max-width:496px;z-index:60;background:var(--card);color:var(--text);border-radius:18px;box-shadow:0 14px 36px -10px rgba(0,0,0,.35),0 0 0 1px var(--hair);padding:9px 9px 9px 10px;display:flex;align-items:center;gap:10px;animation:up .22s cubic-bezier(.2,.8,.2,1)}
+#toast .tic{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:800;font-size:15px}
+#toast .tic svg.i{width:19px;height:19px}
+#toast .tic.feed{background:var(--feed-bg);color:var(--feed-ink)} #toast .tic.pee{background:var(--pee-bg);color:var(--pee-ink)} #toast .tic.poop{background:var(--poop-bg);color:var(--poop-ink)} #toast .tic.spit{background:var(--spit-bg);color:var(--spit-ink)}
+#toast .tic.both{background:linear-gradient(135deg,var(--pee-bg) 50%,var(--poop-bg) 50%);color:var(--poop-ink)}
+#toast .tt{flex:1;min-width:0;padding-left:2px}
+#toast .t1{font-weight:700;font-size:14.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toast .t2{font-size:12px;color:var(--muted);font-weight:500;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toast button{flex:none;height:36px;padding:0 12px;border-radius:11px;font-weight:700;font-size:13px;background:var(--card2);color:var(--text);display:flex;align-items:center;gap:5px}
+#toast button:active{filter:brightness(.94)}
+#toast button.alt svg.i{width:16px;height:16px}
+#toast button.undo{background:var(--accent-soft);color:var(--accent)}
 
 @media print{
   body{background:#fff;color:#000}
@@ -406,7 +417,7 @@ ol.steps b{color:var(--text)}
   </div>
 </div>
 
-<div id="toast" hidden><span></span><button class="alt" hidden>Add photo</button><button class="undo">Undo</button></div>
+<div id="toast" hidden role="status"><div class="tic" hidden></div><div class="tt"><div class="t1"></div><div class="t2" hidden></div></div><button class="alt" hidden><svg class="i"><use href="#i-cam"/></svg>Photo</button><button class="undo">Undo</button></div>
 
 <div class="lightbox" id="lightbox" hidden>
   <div class="lb-top"><button id="lbClose" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
@@ -498,16 +509,17 @@ function lastActivity(a){return Math.max(a.segStart||a.start||0,a.pauseStart||0)
 function startFeed(side){const a=S.active;const now=Date.now();
   if(a&&now-lastActivity(a)<STALE_MS){if(a.paused){resumeFeed(side);return;}if(a.side!==side){switchSide();return;}toast('Already feeding on the '+SIDE[side].toLowerCase()+' side');return;}
   if(a)endFeed(true);
-  const ev={id:uid(),t:'feed',at:now,side,dur:null,by:me()};putEvent(ev);setActive({id:ev.id,day:dayKey(now),start:now,side,sides:side,segStart:now,segs:[],by:me()});toast('Feeding · '+SIDE[side],()=>{delEvent(ev);});}
+  const ev={id:uid(),t:'feed',at:now,side,dur:null,by:me()};putEvent(ev);setActive({id:ev.id,day:dayKey(now),start:now,side,sides:side,segStart:now,segs:[],by:me()});toast('Feeding · '+SIDE[side],()=>{delEvent(ev);},null,{kind:'feed',icon:side,sub:'Started '+fmtTime(now)});}
 function closeSeg(a,now){const segs=(a.segs||[]).map(s=>Object.assign({},s));if(a.paused)return segs;const sec=Math.max(1,Math.round((now-(a.segStart||a.start))/1000));const last=segs[segs.length-1];if(last&&last.s===a.side)last.sec+=sec;else segs.push({s:a.side,sec});return segs;}
-function pauseFeed(){const a=S.active;if(!a||a.paused)return;const now=Date.now();const segs=closeSeg(a,now);patchActiveEvent({side:a.sides,segs});setActive(Object.assign({},a,{segs,paused:true,pauseStart:now}));toast('Paused · '+SIDE[a.side]+' so far '+mins(segs[segs.length-1].sec)+' min');}
-function resumeFeed(side){const a=S.active;if(!a)return;const now=Date.now();const sides=a.sides[a.sides.length-1]===side?a.sides:a.sides+side;patchActiveEvent({side:sides});setActive(Object.assign({},a,{side,sides,segStart:now,paused:false,pauseStart:null}));toast('Back on · '+SIDE[side]);}
-function switchSide(){const a=S.active;if(!a)return;const ns=a.side==='L'?'R':'L';if(a.paused){resumeFeed(ns);return;}const now=Date.now();const sides=a.sides+ns;const segs=closeSeg(a,now);patchActiveEvent({side:sides,segs});setActive(Object.assign({},a,{side:ns,sides,segStart:now,segs}));toast('Switched to '+SIDE[ns]+' · '+SIDE[a.side]+' was '+mins(segs[segs.length-1].sec)+' min');}
-function endFeed(silent){const a=S.active;if(!a)return;const now=Date.now();const segs=closeSeg(a,now);const dur=segTotal(segs);patchActiveEvent({side:a.sides,segs,dur,end:now});setActive(null);if(!silent)toast('Feed ended · '+(segs.length>1?segs.map(s=>s.s+' '+mins(s.sec)).join(' · ')+' · '+dur+' min total':dur+' min'));}
+function pauseFeed(){const a=S.active;if(!a||a.paused)return;const now=Date.now();const segs=closeSeg(a,now);patchActiveEvent({side:a.sides,segs});setActive(Object.assign({},a,{segs,paused:true,pauseStart:now}));toast('Paused',null,null,{kind:'feed',icon:a.side,sub:SIDE[a.side]+' so far '+mins(segs[segs.length-1].sec)+' min'});}
+function resumeFeed(side){const a=S.active;if(!a)return;const now=Date.now();const sides=a.sides[a.sides.length-1]===side?a.sides:a.sides+side;patchActiveEvent({side:sides});setActive(Object.assign({},a,{side,sides,segStart:now,paused:false,pauseStart:null}));toast('Back on · '+SIDE[side],null,null,{kind:'feed',icon:side,sub:'Resumed '+fmtTime(now)});}
+function switchSide(){const a=S.active;if(!a)return;const ns=a.side==='L'?'R':'L';if(a.paused){resumeFeed(ns);return;}const now=Date.now();const sides=a.sides+ns;const segs=closeSeg(a,now);patchActiveEvent({side:sides,segs});setActive(Object.assign({},a,{side:ns,sides,segStart:now,segs}));toast('Switched to '+SIDE[ns],null,null,{kind:'feed',icon:ns,sub:SIDE[a.side]+' was '+mins(segs[segs.length-1].sec)+' min'});}
+function endFeed(silent){const a=S.active;if(!a)return;const now=Date.now();const segs=closeSeg(a,now);const dur=segTotal(segs);patchActiveEvent({side:a.sides,segs,dur,end:now});setActive(null);if(!silent)toast('Feed ended · '+dur+' min',null,null,{kind:'feed',icon:a.sides.slice(0,2),sub:segs.length>1?segs.map(s=>SIDE[s.s]+' '+mins(s.sec)).join(' · '):sideName(a.sides)});}
 function patchActiveEvent(patch){const a=S.active;const d=S.days[a.day];const ev=d&&d.events[a.id];if(ev&&!ev.del)putEvent(Object.assign({},ev,patch));}
 function photoOffer(ev){return{label:'Add photo',fn:()=>{const cur=(S.days[dayKey(ev.at)]||{events:{}}).events[ev.id];if(cur&&!cur.del){openEditor(cur);$('#photoIn').click();}}};}
-function logDiaper(pee,poop){const ev={id:uid(),t:'diaper',at:Date.now(),pee,poop,by:me()};putEvent(ev);toast((pee&&poop?'Wet + dirty':pee?'Wet diaper':'Dirty diaper')+' · '+fmtTime(ev.at),()=>delEvent(ev),photoOffer(ev));}
-function logSpit(){const ev={id:uid(),t:'spit',at:Date.now(),by:me()};putEvent(ev);toast('Spit-up · '+fmtTime(ev.at),()=>delEvent(ev),photoOffer(ev));}
+function loggedSub(ev){return 'Logged '+fmtTime(ev.at)+(who(ev.by)?' · '+who(ev.by):'');}
+function logDiaper(pee,poop){const ev={id:uid(),t:'diaper',at:Date.now(),pee,poop,by:me()};putEvent(ev);toast(pee&&poop?'Wet + dirty diaper':pee?'Wet diaper':'Dirty diaper',()=>delEvent(ev),photoOffer(ev),{kind:pee&&poop?'both':pee?'pee':'poop',sub:loggedSub(ev)});}
+function logSpit(){const ev={id:uid(),t:'spit',at:Date.now(),by:me()};putEvent(ev);toast('Spit-up',()=>delEvent(ev),photoOffer(ev),{kind:'spit',sub:loggedSub(ev)});}
 
 /* ---------- photos ----------
    Each photo is shrunk on the phone to ~150 KB and stored as its own record
@@ -612,7 +624,7 @@ function render(){
   $('#age').textContent=ageText();
   $('#dayLabel').innerHTML=(isToday?'Today':view.day===shiftDay(t,-1)?'Yesterday':fmtDate(view.day))+'<small>'+(isToday?fmtDate(t):'tap for today')+'</small>';
   $('#nextDay').disabled=isToday;
-  $('#pad').hidden=!isToday;
+  $('#pad').hidden=!isToday;document.documentElement.style.setProperty('--toast-b',isToday?'172px':'20px');
   $('#app').style.paddingBottom=isToday?'':'32px';
   $('#logTitle').textContent=isToday?'Today':fmtDate(view.day);
 
@@ -688,9 +700,15 @@ function render(){
 
 /* ---------- toast ---------- */
 let toastTimer;
-function toast(msg,undo,alt){const t=$('#toast');t.querySelector('span').textContent=msg;const b=t.querySelector('button.undo');b.hidden=!undo;b.onclick=()=>{if(undo)undo();hideToast();};
-  const a=t.querySelector('button.alt');a.hidden=!alt;if(alt){a.textContent=alt.label;a.onclick=()=>{hideToast();alt.fn();};}
-  t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(hideToast,alt?9000:6000);}
+const TIC={feed:'',pee:ICON.drop,poop:ICON.poop,both:ICON.drop,spit:ICON.spit};
+/* toast(title, undo?, alt?, {kind, sub, icon}) — kind colors the icon tile, sub is the
+   second line, icon overrides the tile content (e.g. "L" for a left-side feed). */
+function toast(msg,undo,alt,o){o=o||{};const t=$('#toast');t.querySelector('.t1').textContent=msg;
+  const t2=t.querySelector('.t2');t2.hidden=!o.sub;t2.textContent=o.sub||'';
+  const ic=t.querySelector('.tic');ic.hidden=!o.kind;ic.className='tic '+(o.kind||'');ic.innerHTML=o.kind?(o.icon!==undefined?o.icon:TIC[o.kind]):'';
+  const b=t.querySelector('button.undo');b.hidden=!undo;b.onclick=()=>{if(undo)undo();hideToast();};
+  const a=t.querySelector('button.alt');a.hidden=!alt;if(alt)a.onclick=()=>{hideToast();alt.fn();};
+  t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(hideToast,alt?9000:undo?6000:3500);}
 function hideToast(){$('#toast').hidden=true;}
 
 /* ---------- editor ---------- */
