@@ -106,7 +106,7 @@ label.f{display:block;font-size:11.5px;letter-spacing:.09em;text-transform:upper
 .k.feed{background:var(--feed)} .k.pee{background:var(--pee)} .k.poop{background:var(--poop)} .k.spit{background:var(--spit)}
 .hero .big{font-size:54px;font-weight:800;letter-spacing:-.035em;line-height:1;margin-top:10px}
 .hero .big.warn{color:var(--warn)}
-.hero .big small{font-size:22px;font-weight:700;letter-spacing:-.01em;color:var(--muted);margin-left:2px}
+.hero .big small{font-size:18px;font-weight:700;letter-spacing:0;color:var(--muted);margin-left:10px}
 .hero .sub{color:var(--muted);font-size:13.5px;margin-top:8px;font-weight:500}
 .hero .bar{height:4px;border-radius:2px;background:var(--card2);margin-top:16px;overflow:hidden}
 .hero .bar span{display:block;height:100%;border-radius:2px;background:var(--feed);transition:width .6s ease}
@@ -115,7 +115,11 @@ label.f{display:block;font-size:11.5px;letter-spacing:.09em;text-transform:upper
 .hero.live .eyebrow{color:var(--feed-ink)}
 .pulse{width:9px;height:9px;border-radius:50%;background:var(--feed);box-shadow:0 0 0 0 var(--feed);animation:pulse 1.6s ease-out infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--feed) 55%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
-.hero .actions{display:flex;gap:8px;margin-top:16px}
+.hero.paused{background:linear-gradient(160deg,var(--card2),var(--card) 70%)}
+.hero.paused .eyebrow{color:var(--muted)}
+.hero .sub b{color:var(--text);font-weight:700}
+.hero .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.hero .actions .wide{flex-basis:100%}
 .hero .actions button{flex:1;height:46px;border-radius:14px;font-weight:700;font-size:14.5px;background:var(--card);color:var(--feed-ink);box-shadow:inset 0 0 0 1.5px var(--feed)}
 .hero .actions button.primary{background:var(--feed);color:#fff;box-shadow:none}
 .hero .actions button:active{transform:scale(.97)}
@@ -450,19 +454,23 @@ function sideName(s){if(!s)return'';return s.split('').map(c=>SIDE[c]||c).join('
 /* Per-side timing. A feed carries segs:[{s:'L'|'R',sec}] in nursing order; dur is the
    rounded total in minutes. Older entries without segs fall back to dur alone. */
 function segsOf(e){if(e.segs&&e.segs.length)return e.segs;if(e.dur&&(e.side||'').length===1)return[{s:e.side,sec:e.dur*60}];return null;}
-function sideMins(e){const o={L:0,R:0};const g=segsOf(e);if(g)for(const s of g)o[s.s]=(o[s.s]||0)+s.sec/60;return o;}
+function sideMins(e){const o={L:0,R:0};const g=segsOf(e);if(g)for(const s of g)o[s.s]=(o[s.s]||0)+mins(s.sec);return o;}
 function mins(sec){return Math.max(1,Math.round(sec/60));}
 function fmtSplit(e){const g=segsOf(e);if(!g||g.length<2)return e.dur?e.dur+' min':'';return segTotal(g)+' min · '+g.map(s=>s.s+' '+mins(s.sec)).join(' · ');}
 function segTotal(g){return g.reduce((a,s)=>a+mins(s.sec),0);} // sum of rounded parts, so the total always matches what's shown
-function liveSides(a){const parts=(a.segs||[]).map(g=>SIDE[g.s]+' '+mins(g.sec)+'m');parts.push(SIDE[a.side]+' '+elapsed(a.segStart||a.start));return (activePrior?activePrior+' → ':'')+parts.join(' → ');}
+function liveSides(a){const segs=(a.segs||[]).slice();let open='';
+  if(!a.paused){let sec=Math.max(0,Math.round((Date.now()-(a.segStart||a.start))/1000));const last=segs[segs.length-1];if(last&&last.s===a.side){sec+=last.sec;segs.pop();}open=SIDE[a.side]+' '+fmtSec(sec);}
+  const parts=segs.map(g=>SIDE[g.s]+' '+mins(g.sec)+'m');if(open)parts.push(open);return (activePrior?activePrior+' → ':'')+parts.join(' → ');}
 let activePrior='';
+function nursingSec(a,now){return (a.segs||[]).reduce((t,s)=>t+s.sec,0)+(a.paused?0:Math.max(0,Math.round((now-(a.segStart||a.start))/1000)));}
+function fmtSec(sec){sec=Math.max(0,Math.round(sec));const m=Math.floor(sec/60),s=sec%60;return (m>=60?Math.floor(m/60)+':'+pad2(m%60):String(m))+':'+pad2(s);}
 
 /* Feeding sessions. A latch that starts within `gap` minutes of the previous one
    ending belongs to the same session: the clock runs from the first latch, and the
    per-side minutes add up only the nursing time, so burp breaks drop out. A latch
    with no recorded minutes is assumed to have lasted ASSUMED_MIN for linking only. */
 const ASSUMED_MIN=20;
-function feedEnd(e,now){if(S.active&&S.active.id===e.id)return now;const g=segsOf(e);const sec=g?g.reduce((a,s)=>a+s.sec,0):(e.dur?e.dur*60:ASSUMED_MIN*60);return e.at+sec*1000;}
+function feedEnd(e,now){if(S.active&&S.active.id===e.id)return now;if(e.end)return e.end;const g=segsOf(e);const sec=g?g.reduce((a,s)=>a+s.sec,0):(e.dur?e.dur*60:ASSUMED_MIN*60);return e.at+sec*1000;}
 function gapMs(){const g=parseInt(S.settings.gap,10);return (isNaN(g)?10:g)*60000;}
 function sessions(feeds,now){now=now||Date.now();const out=[];
   for(const e of feeds){const last=out[out.length-1];if(last&&e.at-last.end<=gapMs()){last.feeds.push(e);last.end=Math.max(last.end,feedEnd(e,now));}else out.push({start:e.at,end:feedEnd(e,now),feeds:[e]});}
@@ -482,10 +490,20 @@ function delEvent(ev){const day=dayKey(ev.at);const tomb={del:true,u:Date.now()}
 function setActive(a){S.active=a||null;S.activeU=Date.now();save();push('state/active',{feed:S.active,u:S.activeU});render();}
 
 /* quick actions */
-function startFeed(side){if(S.active)endFeed(true);const now=Date.now();const ev={id:uid(),t:'feed',at:now,side,dur:null,by:me()};putEvent(ev);setActive({id:ev.id,day:dayKey(now),start:now,side,sides:side,segStart:now,segs:[],by:me()});toast('Feeding · '+SIDE[side],()=>{delEvent(ev);});}
-function closeSeg(a,now){return (a.segs||[]).concat([{s:a.side,sec:Math.max(1,Math.round((now-(a.segStart||a.start))/1000))}]);}
-function switchSide(){const a=S.active;if(!a)return;const now=Date.now();const ns=a.side==='L'?'R':'L';const sides=a.sides+ns;const segs=closeSeg(a,now);patchActiveEvent({side:sides,segs});setActive(Object.assign({},a,{side:ns,sides,segStart:now,segs}));toast('Switched to '+SIDE[ns]+' · '+SIDE[a.side]+' was '+mins(segs[segs.length-1].sec)+' min');}
-function endFeed(silent){const a=S.active;if(!a)return;const now=Date.now();const segs=closeSeg(a,now);const dur=segTotal(segs);patchActiveEvent({side:a.sides,segs,dur});setActive(null);if(!silent)toast('Feed ended · '+(segs.length>1?segs.map(s=>s.s+' '+mins(s.sec)).join(' · ')+' · '+dur+' min total':dur+' min'));}
+/* A live feed can be paused (she came off) and resumed on either side without
+   ending it. Pauses never count toward the minutes. A forgotten feed with no
+   activity for 90 minutes is closed automatically when a new one is started. */
+const STALE_MS=90*60000;
+function lastActivity(a){return Math.max(a.segStart||a.start||0,a.pauseStart||0);}
+function startFeed(side){const a=S.active;const now=Date.now();
+  if(a&&now-lastActivity(a)<STALE_MS){if(a.paused){resumeFeed(side);return;}if(a.side!==side){switchSide();return;}toast('Already feeding on the '+SIDE[side].toLowerCase()+' side');return;}
+  if(a)endFeed(true);
+  const ev={id:uid(),t:'feed',at:now,side,dur:null,by:me()};putEvent(ev);setActive({id:ev.id,day:dayKey(now),start:now,side,sides:side,segStart:now,segs:[],by:me()});toast('Feeding · '+SIDE[side],()=>{delEvent(ev);});}
+function closeSeg(a,now){const segs=(a.segs||[]).map(s=>Object.assign({},s));if(a.paused)return segs;const sec=Math.max(1,Math.round((now-(a.segStart||a.start))/1000));const last=segs[segs.length-1];if(last&&last.s===a.side)last.sec+=sec;else segs.push({s:a.side,sec});return segs;}
+function pauseFeed(){const a=S.active;if(!a||a.paused)return;const now=Date.now();const segs=closeSeg(a,now);patchActiveEvent({side:a.sides,segs});setActive(Object.assign({},a,{segs,paused:true,pauseStart:now}));toast('Paused · '+SIDE[a.side]+' so far '+mins(segs[segs.length-1].sec)+' min');}
+function resumeFeed(side){const a=S.active;if(!a)return;const now=Date.now();const sides=a.sides[a.sides.length-1]===side?a.sides:a.sides+side;patchActiveEvent({side:sides});setActive(Object.assign({},a,{side,sides,segStart:now,paused:false,pauseStart:null}));toast('Back on · '+SIDE[side]);}
+function switchSide(){const a=S.active;if(!a)return;const ns=a.side==='L'?'R':'L';if(a.paused){resumeFeed(ns);return;}const now=Date.now();const sides=a.sides+ns;const segs=closeSeg(a,now);patchActiveEvent({side:sides,segs});setActive(Object.assign({},a,{side:ns,sides,segStart:now,segs}));toast('Switched to '+SIDE[ns]+' · '+SIDE[a.side]+' was '+mins(segs[segs.length-1].sec)+' min');}
+function endFeed(silent){const a=S.active;if(!a)return;const now=Date.now();const segs=closeSeg(a,now);const dur=segTotal(segs);patchActiveEvent({side:a.sides,segs,dur,end:now});setActive(null);if(!silent)toast('Feed ended · '+(segs.length>1?segs.map(s=>s.s+' '+mins(s.sec)).join(' · ')+' · '+dur+' min total':dur+' min'));}
 function patchActiveEvent(patch){const a=S.active;const d=S.days[a.day];const ev=d&&d.events[a.id];if(ev&&!ev.del)putEvent(Object.assign({},ev,patch));}
 function photoOffer(ev){return{label:'Add photo',fn:()=>{const cur=(S.days[dayKey(ev.at)]||{events:{}}).events[ev.id];if(cur&&!cur.del){openEditor(cur);$('#photoIn').click();}}};}
 function logDiaper(pee,poop){const ev={id:uid(),t:'diaper',at:Date.now(),pee,poop,by:me()};putEvent(ev);toast((pee&&poop?'Wet + dirty':pee?'Wet diaper':'Dirty diaper')+' · '+fmtTime(ev.at),()=>delEvent(ev),photoOffer(ev));}
@@ -616,10 +634,16 @@ function render(){
   const hero=$('#hero');
   if(!isToday){hero.hidden=true;hero.innerHTML='';}
   else if(a){
-    hero.hidden=false;hero.className='hero live';
+    const paused=!!a.paused;hero.hidden=false;hero.className='hero live'+(paused?' paused':'');
     const part=(lastSes&&lastSes.active&&lastSes.parts>1)?' · latch '+lastSes.parts:'';
-    hero.innerHTML='<div class="eyebrow"><i class="pulse"></i>Feeding · '+SIDE[a.side]+' side'+part+(a.by?' · '+esc(who(a.by)):'')+'</div><div class="big num" id="activeElapsed">'+elapsed(a.start)+'</div><div class="sub num"><span id="activeSides">'+liveSides(a)+'</span> · session began '+fmtTime(lastSes&&lastSes.active?lastSes.start:a.start)+'</div><div class="actions"><button id="switchSide">Switch to '+SIDE[a.side==='L'?'R':'L']+'</button><button class="primary" id="endFeed">End feed</button></div>';
-    $('#switchSide').onclick=switchSide;$('#endFeed').onclick=()=>endFeed(false);
+    const began='session began '+fmtTime(lastSes&&lastSes.active?lastSes.start:a.start);
+    hero.innerHTML='<div class="eyebrow">'+(paused?'<i class="k feed"></i>Paused · was on '+SIDE[a.side]:'<i class="pulse"></i>Feeding · '+SIDE[a.side]+' side'+part)+(a.by?' · '+esc(who(a.by)):'')+'</div>'+
+      '<div class="big num"><span id="activeElapsed">'+fmtSec(nursingSec(a,now))+'</span><small>nursing</small></div>'+
+      '<div class="sub num">'+(paused?'Off for <b id="pauseElapsed">'+fmtSec((now-(a.pauseStart||now))/1000)+'</b> · ':'')+'<span id="activeSides">'+liveSides(a)+'</span> · '+began+'</div>'+
+      (paused?'<div class="actions"><button id="resumeL">Resume Left</button><button id="resumeR">Resume Right</button><button class="primary wide" id="endFeed">End feed</button></div>'
+             :'<div class="actions"><button id="pauseFeed">Pause</button><button id="switchSide">Switch to '+SIDE[a.side==='L'?'R':'L']+'</button><button class="primary wide" id="endFeed">End feed</button></div>');
+    const on=(id,fn)=>{const b=$('#'+id);if(b)b.onclick=fn;};
+    on('switchSide',switchSide);on('pauseFeed',pauseFeed);on('resumeL',()=>resumeFeed('L'));on('resumeR',()=>resumeFeed('R'));on('endFeed',()=>endFeed(false));
   }else if(lastSes){
     hero.hidden=false;hero.className='hero';
     const gap=now-lastSes.start;const pct=Math.min(100,Math.round(gap/FEED_GAP*100));const warn=gap>FEED_GAP;
@@ -647,7 +671,7 @@ function render(){
     wrap.innerHTML=de.slice().reverse().map(e=>{
       let ic,title,meta=[],cls='';
       if(e.t==='feed'){const s=e.side||'';ic='<div class="ic feed">'+(s.length>1?s.slice(0,2):s||'?')+'</div>';title='Feed · '+sideName(s);
-        if(a&&a.id===e.id)meta.push('<span class="live">In progress</span>');else if(fmtSplit(e))meta.push(fmtSplit(e));
+        if(a&&a.id===e.id)meta.push('<span class="live">'+(a.paused?'Paused':'In progress')+'</span>');else if(fmtSplit(e))meta.push(fmtSplit(e));
         const si=sesIdx.get(e.id);
         if(si&&si.s.parts>1){const top=si.i===si.s.parts-1,bot=si.i===0;cls=' ses '+(top?'ses-top':bot?'ses-bot':'ses-mid');
           if(top&&!si.s.active)meta.push('<span class="ses-sum">Session '+fmtSession(si.s)+'</span>');else if(!top)meta.push('<span class="ses-sum">same session</span>');}}
@@ -861,7 +885,7 @@ $('#printBtn').onclick=()=>{closeSheets();setTimeout(()=>window.print(),150);};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#lightbox').hidden)closeLightbox();else dismiss();}});
 
 // live timers
-setInterval(()=>{if(S.active){const el=$('#activeElapsed');if(el)el.textContent=elapsed(S.active.start);const s=$('#activeSides');if(s)s.textContent=liveSides(S.active);}},1000);
+setInterval(()=>{const a=S.active;if(!a)return;const now=Date.now();const el=$('#activeElapsed');if(el)el.textContent=fmtSec(nursingSec(a,now));const s=$('#activeSides');if(s)s.textContent=liveSides(a);const p=$('#pauseElapsed');if(p&&a.paused)p.textContent=fmtSec((now-(a.pauseStart||now))/1000);},1000);
 let lastDay=today();
 setInterval(()=>{const t=today();if(t!==lastDay){lastDay=t;if(view.follow)view.day=t;}render();},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();flush();flushPhotos();}});
