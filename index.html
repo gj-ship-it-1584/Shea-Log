@@ -237,6 +237,19 @@ label.f{display:block;font-size:11.5px;letter-spacing:.09em;text-transform:upper
 .btn:active{filter:brightness(.95)}
 .btn.primary{background:var(--accent);color:var(--accent-ink)}
 .btn.danger{background:transparent;color:var(--bad);box-shadow:inset 0 0 0 1px var(--hair2);flex:0 0 auto;padding:0 18px}
+.btn:disabled{opacity:.45;pointer-events:none}
+.mvlist{display:flex;flex-direction:column;gap:6px}
+.mvrow{display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:14px;padding:11px 14px;font-size:14px;cursor:pointer}
+.mvrow input{width:20px;height:20px;accent-color:var(--accent);margin:0;flex:none}
+.mvrow .mvl{flex:1;min-width:0}
+.mvrow .mvl b{display:block;font-weight:700}
+.mvrow .mvl span{display:block;font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mvrow .mvr{font-size:12.5px;font-weight:700;text-align:right;white-space:nowrap;color:var(--faint)}
+.mvrow .mvr.take{color:var(--milk-ink)}
+.mvrow.off{opacity:.55}
+.mvsum{margin-top:14px;background:var(--milk-bg);color:var(--milk-ink);border-radius:14px;padding:12px 14px;font-size:13.5px;line-height:1.5;font-weight:500}
+.mvsum b{font-weight:800}
+.mvsum .w{color:var(--warn);font-weight:700}
 .btn.sm{height:42px;font-size:14px;border-radius:12px}
 .sect{border-top:1px solid var(--hair);margin-top:22px;padding-top:8px}
 .sect h3{font-size:15.5px;margin:10px 0 2px}
@@ -526,6 +539,22 @@ table.gt tr:last-child td{border-bottom:0}
   </div>
 </div>
 
+<div class="sheet" id="mvSheet" hidden>
+  <div class="bg" data-close></div>
+  <div class="panel" role="dialog" aria-labelledby="mvTitle">
+    <div class="grab"></div>
+    <div class="toprow"><h2 id="mvTitle">Move to freezer</h2><button class="x" data-close aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <p class="hint" style="margin-top:0">Takes from the oldest fridge milk first, then fills from the next bag. Untick a bag to skip it.</p>
+    <label class="f">Ounces going into the freezer bag</label>
+    <div id="mvAmt"></div>
+    <div class="chips oz" id="mvChips"></div>
+    <label class="f">From the fridge</label>
+    <div class="mvlist" id="mvList"></div>
+    <div class="mvsum" id="mvSum"></div>
+    <div class="rowb"><button class="btn" data-close>Cancel</button><button class="btn primary" id="mvGo">Move</button></div>
+  </div>
+</div>
+
 <div id="toast" hidden role="status"><div class="tic" hidden></div><div class="tt"><div class="t1"></div><div class="t2" hidden></div></div><button class="alt" hidden><svg class="i"><use href="#i-cam"/></svg>Photo</button><button class="undo">Undo</button></div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -770,8 +799,10 @@ function bottleAdvice(at){const days=ageDays(at);const g=guideFor(days);const li
 function useBy(b){if(b.loc==='freezer')return b.at+180*DAY;if(b.thawedAt)return Math.min(b.thawedAt+DAY,b.at+180*DAY);return b.at+4*DAY;}
 function bagsNow(opts){opts=opts||{};const ov=(S.milk&&S.milk.bags)||{};const all=allEvents();const bags=[];
   for(const e of all){if(e.t!=='pump')continue;const o=ov[e.id]||{};if(o.gone)continue;bags.push({id:e.id,at:e.at,oz:o.oz!=null?+o.oz:(+e.oz||0),loc:o.loc||e.to||'fridge',frozenAt:o.frozenAt||null,thawedAt:o.thawedAt||null,by:e.by,src:'pump'});}
-  for(const [id,b] of Object.entries(ov)){if(!b.manual||b.gone)continue;bags.push({id,at:b.at||0,oz:+b.oz||0,loc:b.loc||'fridge',frozenAt:b.frozenAt||null,thawedAt:b.thawedAt||null,by:b.by,src:'manual',note:b.note});}
+  for(const [id,b] of Object.entries(ov)){if(!b.manual||b.gone)continue;const combo=!!(b.parts&&b.parts.length);bags.push({id,at:b.at||0,oz:+b.oz||0,loc:b.loc||'fridge',frozenAt:b.frozenAt||null,thawedAt:b.thawedAt||null,by:b.by,src:combo?'combo':'manual',parts:combo?b.parts:null,note:b.note});}
   const used={};for(const e of all){if(e.t!=='bottle'||e.src==='formula'||e.id===opts.exclude)continue;for(const f of (e.from||[]))used[f.bag]=(used[f.bag]||0)+(+f.oz||0);}
+  /* milk poured into a combined freezer bag leaves its source bags, even if the combined bag is later discarded */
+  for(const b of Object.values(ov)){for(const p of (b.parts||[]))used[p.bag]=(used[p.bag]||0)+(+p.oz||0);}
   for(const b of bags){b.used=round2(used[b.id]||0);b.left=Math.max(0,round2(b.oz-b.used));b.useBy=useBy(b);}
   bags.sort((a,b)=>a.at-b.at);return bags;}
 function alloc(oz,loc,exclude){const bags=bagsNow({exclude}).filter(b=>b.loc===loc&&b.left>0).sort((a,b)=>(a.useBy-b.useBy)||(a.at-b.at));const from=[];let need=round2(oz);
@@ -787,14 +818,14 @@ document.addEventListener('click',e=>{const b=e.target.closest('.amt button');if
 const bg={id:null,bag:null};
 function openBag(id){bg.id=id;const b=id?bagsNow().find(x=>x.id===id):null;bg.bag=b||null;
   $('#bgTitle').textContent=b?(b.loc==='freezer'?'Frozen bag':'Fridge bag'):'Add milk by hand';
-  $('#bgInfo').textContent=b?((b.src==='manual'?'Added ':'Pumped ')+fmtDate(dayKey(b.at))+' '+fmtTime(b.at)+(b.by?' by '+who(b.by):'')+(b.used?' · '+fmtOz(b.used)+' oz already used':'')+(b.thawedAt?' · thawed '+fmtDate(dayKey(b.thawedAt))+' '+fmtTime(b.thawedAt):'')):'For milk already in the fridge or freezer that was never logged as a pumping session.';
+  $('#bgInfo').textContent=b?((b.src==='combo'?'Combined '+(b.frozenAt?fmtDate(dayKey(b.frozenAt))+' ':'')+'from '+b.parts.length+' bags · oldest milk pumped ':b.src==='manual'?'Added ':'Pumped ')+fmtDate(dayKey(b.at))+' '+fmtTime(b.at)+(b.by?' by '+who(b.by):'')+(b.used?' · '+fmtOz(b.used)+' oz already used':'')+(b.thawedAt?' · thawed '+fmtDate(dayKey(b.thawedAt))+' '+fmtTime(b.thawedAt):'')):'For milk already in the fridge or freezer that was never logged as a pumping session.';
   $('#bgAmt').innerHTML=amtHTML('bgOz',b?b.oz:null,'oz');
   seg($('#bgLoc'),b?b.loc:'fridge',updateBagHint);
-  $('#bgWhenWrap').hidden=!!(b&&b.src==='pump');$('#bgAt').value=toLocalInput(b?b.at:Date.now());
+  $('#bgWhenWrap').hidden=!!(b&&b.src!=='manual');$('#bgAt').value=toLocalInput(b?b.at:Date.now());
   $('#bgDiscard').hidden=!b;updateBagHint();$('#bagSheet').hidden=false;}
 function updateBagHint(){const b=bg.bag;const p=$('#bgLoc [aria-pressed="true"]');const loc=p?p.dataset.v:'fridge';const h=$('#bgLocHint');
   if(b&&b.loc==='freezer'&&loc==='fridge')h.textContent='Thawing: use within 24 hours once thawed, and never refreeze.';
-  else if(b&&b.loc==='fridge'&&loc==='freezer')h.textContent=b.thawedAt?'This bag was thawed already; thawed milk should not be refrozen.':'Freezing keeps it about 6 months.';
+  else if(b&&b.loc==='fridge'&&loc==='freezer')h.textContent=b.thawedAt?'This bag was thawed already; thawed milk should not be refrozen.':'Moves this whole bag (good about 6 months frozen). To move part of it or combine bags, use Move to freezer on the Milk tab.';
   else h.textContent=loc==='freezer'?'Good for about 6 months in the freezer.':'Fresh milk keeps 4 days in the fridge.';}
 function saveBag(){const oz=parseFloat($('#bgOz').value);if(isNaN(oz)||oz<=0){toast('Enter how many ounces');return;}const p=$('#bgLoc [aria-pressed="true"]');const loc=p?p.dataset.v:'fridge';const b=bg.bag;const now=Date.now();
   const icon=loc==='freezer'?ICON.snow:ICON.fridge;
@@ -804,6 +835,41 @@ function saveBag(){const oz=parseFloat($('#bgOz').value);if(isNaN(oz)||oz<=0){to
   else{const at=new Date($('#bgAt').value).getTime();setBag(uid(),{manual:true,at:isNaN(at)?now:at,oz:round2(oz),loc,by:me()});toast('Milk added',null,null,{kind:'milk',icon,sub:fmtOz(oz)+' oz · '+loc});}
   $('#bagSheet').hidden=true;}
 function discardBag(){const b=bg.bag;if(!b||!confirm('Discard this bag? '+fmtOz(b.left)+' oz comes off the count.'))return;setBag(b.id,{gone:true});$('#bagSheet').hidden=true;toast('Bag discarded');}
+
+/* Move to freezer. Fills the requested ounces from fresh (never thawed) fridge bags,
+   oldest pump first, skipping any bag the parent unticks. One source bag moved whole
+   just changes location; anything else becomes a new combined freezer bag that records
+   what it took from each source (parts) and is dated from its oldest milk. */
+const mv={skip:new Set()};
+function moveCandidates(){return bagsNow().filter(b=>b.loc==='fridge'&&b.left>0&&!b.thawedAt).sort((a,b)=>a.at-b.at);}
+function planMove(oz){const c=moveCandidates();let need=round2(Math.max(0,oz||0));const plan=[];
+  for(const b of c){if(mv.skip.has(b.id)){plan.push({b,take:0,skip:true});continue;}const take=round2(Math.min(b.left,need));need=round2(need-take);plan.push({b,take});}
+  const avail=round2(c.filter(b=>!mv.skip.has(b.id)).reduce((t,b)=>t+b.left,0));const moved=round2(plan.reduce((t,p)=>t+p.take,0));
+  return{plan,avail,moved,short:Math.max(0,round2((oz||0)-moved)),total:round2(c.reduce((t,b)=>t+b.left,0))};}
+function openMove(){mv.skip=new Set();const c=moveCandidates();if(!c.length){toast('No fresh milk in the fridge to move');return;}
+  const total=round2(c.reduce((t,b)=>t+b.left,0));$('#mvAmt').innerHTML=amtHTML('mvOz',total,'oz');
+  $('#mvChips').innerHTML='<button data-oz="'+total+'">All · '+fmtOz(total)+' oz</button>'+[2,3,4,5,6,8,10].filter(v=>v<total).map(v=>'<button data-oz="'+v+'">'+v+' oz</button>').join('');
+  renderMove();$('#mvSheet').hidden=false;}
+function renderMove(){const oz=parseFloat($('#mvOz').value)||0;const P=planMove(oz);const now=Date.now();
+  $('#mvList').innerHTML=P.plan.map(p=>{const b=p.b;const keeps=round2(b.left-p.take);const r=p.skip?'skipped':p.take===0?'stays':keeps>0?'takes '+fmtOz(p.take)+' · keeps '+fmtOz(keeps):'all '+fmtOz(p.take);
+    return '<label class="mvrow'+(p.skip?' off':'')+'"><input type="checkbox" data-bag="'+b.id+'"'+(p.skip?'':' checked')+'><div class="mvl"><b>'+fmtOz(b.left)+' oz'+(b.used?' <span style="display:inline;font-weight:600">of '+fmtOz(b.oz)+'</span>':'')+'</b><span>'+(b.src==='manual'?'Added ':'Pumped ')+fmtDate(dayKey(b.at))+' '+fmtTime(b.at)+' · '+bagStatus(b,now).text+'</span></div><div class="mvr'+(p.take>0?' take':'')+'">'+r+'</div></label>';}).join('');
+  const used=P.plan.filter(p=>p.take>0);const btn=$('#mvGo');
+  if(!used.length){$('#mvSum').innerHTML=oz>0?'<span class="w">Tick at least one bag.</span>':'Enter how many ounces to move.';btn.disabled=true;btn.textContent='Move';return;}
+  const oldest=Math.min(...used.map(p=>p.b.at));const fridgeAfter=round2(P.total-P.moved);
+  $('#mvSum').innerHTML=(P.short>0?'<span class="w">Only '+fmtOz(P.avail)+' oz is ticked, so '+fmtOz(P.moved)+' oz will move.</span><br>':'')+
+    (used.length===1&&used[0].take===used[0].b.left?'The whole bag moves to the freezer':'New freezer bag: <b>'+fmtOz(P.moved)+' oz</b> from '+used.length+(used.length===1?' bag':' bags'))+
+    ' · use by <b>'+fmtDate(dayKey(oldest+180*DAY))+'</b>, dated from the oldest milk in it.<br>Leaves <b>'+fmtOz(fridgeAfter)+' oz</b> in the fridge.';
+  btn.disabled=false;btn.textContent='Move '+fmtOz(P.moved)+' oz';}
+function doMove(){const oz=parseFloat($('#mvOz').value)||0;const P=planMove(oz);const used=P.plan.filter(p=>p.take>0);if(!used.length)return;const now=Date.now();
+  const src=used.map(p=>fmtOz(p.take)+' from '+fmtDate(dayKey(p.b.at)).replace(/^\w+, /,'')).join(' + ');const left=round2(P.total-P.moved);
+  let undo;
+  if(used.length===1&&used[0].take===used[0].b.left){const b=used[0].b;setBag(b.id,{loc:'freezer',frozenAt:now});undo=()=>setBag(b.id,{loc:'fridge',frozenAt:null});}
+  else{const id=uid();setBag(id,{manual:true,at:Math.min(...used.map(p=>p.b.at)),oz:P.moved,loc:'freezer',frozenAt:now,parts:used.map(p=>({bag:p.b.id,oz:p.take})),by:me()});undo=()=>setBag(id,{gone:true,parts:[]});}
+  $('#mvSheet').hidden=true;toast('Moved '+fmtOz(P.moved)+' oz to the freezer',undo,null,{kind:'milk',icon:ICON.snow,sub:src+' · '+fmtOz(left)+' oz left in fridge'});}
+$('#mvSheet').addEventListener('input',e=>{if(e.target.id==='mvOz')renderMove();});
+$('#mvSheet').addEventListener('change',e=>{const c=e.target.closest('input[data-bag]');if(!c)return;if(c.checked)mv.skip.delete(c.dataset.bag);else mv.skip.add(c.dataset.bag);renderMove();});
+$('#mvChips').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('#mvOz').value=fmtOz(parseFloat(b.dataset.oz));renderMove();});
+$('#mvGo').onclick=doMove;
 
 /* targets for one day: count vs. minimum, with pace awareness for today */
 function targetsFor(dk,now){const isT=dk===today();const days=ageDays(dayStart(dk));const g=guideFor(days);const de=dayEvents(dk);
@@ -820,19 +886,20 @@ function targetsFor(dk,now){const isT=dk===today();const days=ageDays(dayStart(d
 
 function renderMilk(now){const el=$('#tabMilk');const st=stock();
   const bagRow=b=>{const s=bagStatus(b,now);const when=fmtDate(dayKey(b.at))+' '+fmtTime(b.at);
-    return '<button class="row bagrow" data-bag="'+b.id+'"><div class="t num">'+fmtOz(b.left)+'<small>oz</small></div><div class="ic milk">'+(b.loc==='freezer'?ICON.snow:ICON.fridge)+'</div><div><div class="title">'+(b.used?fmtOz(b.left)+' of '+fmtOz(b.oz)+' oz left':fmtOz(b.oz)+' oz')+(b.thawedAt?' · thawed':'')+'</div><div class="meta">'+(b.src==='manual'?'Added ':'Pumped ')+when+(b.by?' · '+esc(who(b.by)):'')+' · <span class="'+s.cls+'">'+s.text+'</span></div></div></button>';};
-  const list=(title,arr,empty)=>'<section class="tl"><div class="tl-head"><h2>'+title+'</h2></div>'+(arr.length?arr.map(bagRow).join(''):'<div class="none">'+empty+'</div>')+'</section>';
+    return '<button class="row bagrow" data-bag="'+b.id+'"><div class="t num">'+fmtOz(b.left)+'<small>oz</small></div><div class="ic milk">'+(b.loc==='freezer'?ICON.snow:ICON.fridge)+'</div><div><div class="title">'+(b.used?fmtOz(b.left)+' of '+fmtOz(b.oz)+' oz left':fmtOz(b.oz)+' oz')+(b.thawedAt?' · thawed':'')+'</div><div class="meta">'+(b.src==='combo'?'Combined from '+b.parts.length+' bags · oldest '+when:(b.src==='manual'?'Added ':'Pumped ')+when)+(b.by?' · '+esc(who(b.by)):'')+' · <span class="'+s.cls+'">'+s.text+'</span></div></div></button>';};
+  const list=(title,arr,empty,act)=>'<section class="tl"><div class="tl-head"><h2>'+title+'</h2>'+(act||'')+'</div>'+(arr.length?arr.map(bagRow).join(''):'<div class="none">'+empty+'</div>')+'</section>';
   const wk=now-7*DAY;const all=allEvents();const pumps=all.filter(e=>e.t==='pump'&&e.at>=wk),bots=all.filter(e=>e.t==='bottle'&&e.at>=wk);
   const sum=(arr,k)=>round2(arr.reduce((t,e)=>t+(+e[k]||0),0));
   const pOz=sum(pumps,'oz'),pL=sum(pumps,'L'),pR=sum(pumps,'R'),bBm=sum(bots.filter(e=>e.src!=='formula'),'oz'),bF=sum(bots.filter(e=>e.src==='formula'),'oz');
   const fridgeSorted=st.fridge.slice().sort((a,b)=>a.useBy-b.useBy);const oldest=fridgeSorted[0];
   el.innerHTML='<section class="mtiles"><div class="mt"><div class="l">'+ICON.fridge+'Fridge</div><b class="num">'+fmtOz(st.fridgeOz)+'<small>oz</small></b><span>'+(st.fridge.length?st.fridge.length+(st.fridge.length===1?' bag':' bags')+(oldest?' · '+bagStatus(oldest,now).text:''):'empty')+'</span></div>'+
     '<div class="mt"><div class="l">'+ICON.snow+'Freezer</div><b class="num">'+fmtOz(st.freezerOz)+'<small>oz</small></b><span>'+(st.freezer.length?st.freezer.length+(st.freezer.length===1?' bag':' bags'):'empty')+'</span></div></section>'+
-    list('In the fridge',fridgeSorted,'Nothing in the fridge. Log a pumping session and it lands here.')+
+    list('In the fridge',fridgeSorted,'Nothing in the fridge. Log a pumping session and it lands here.',moveCandidates().length?'<button class="linkbtn" id="moveBtn">'+ICON.snow+'Move to freezer</button>':'')+
     list('In the freezer',st.freezer,'Nothing frozen. Tap a fridge bag to move it here.')+
     '<button class="btn sm" id="addBag" style="align-self:center;padding:0 18px">'+ICON.plus+'Add milk by hand</button>'+
     '<section class="counts"><div><b class="num">'+fmtOz(pOz)+'</b><span>oz pumped · 7d</span>'+(pOz?'<i class="extra">L '+fmtOz(pL)+' · R '+fmtOz(pR)+'</i>':'')+'</div><div><b class="num">'+pumps.length+'</b><span>sessions</span></div><div><b class="num">'+fmtOz(bBm)+'</b><span>oz bottled</span>'+(bF?'<i class="extra">+ '+fmtOz(bF)+' formula</i>':'')+'</div><div><b class="num">'+bots.length+'</b><span>bottles</span></div></section>'+
-    '<p class="hint" style="padding:0 6px">Fresh milk keeps 4 days in the fridge and about 6 months in the freezer. Thawed milk: 24 hours in the fridge, never refrozen. Bottles of breast milk come out of the fridge count automatically, soonest-to-expire first. Tap a bag to move, thaw, edit or discard it.</p>';
+    '<p class="hint" style="padding:0 6px">Fresh milk keeps 4 days in the fridge and about 6 months in the freezer. Thawed milk: 24 hours in the fridge, never refrozen. Bottles of breast milk come out of the fridge count automatically, soonest-to-expire first. Move to freezer pours the oldest fridge milk into one freezer bag, dated from its oldest milk. Tap a bag to move, thaw, edit or discard it.</p>';
+  const mb=$('#moveBtn');if(mb)mb.onclick=openMove;
   el.querySelectorAll('.bagrow').forEach(r=>r.onclick=()=>openBag(r.dataset.bag));$('#addBag').onclick=()=>openBag(null);}
 
 function renderTargets(now){const el=$('#tabTargets');const dk=view.day;const isT=dk===today();const T=targetsFor(dk,now);const g=T.g;const days=T.days;
@@ -1136,7 +1203,7 @@ async function exportCsv(){
 }
 
 /* ---------- wiring ---------- */
-function closeSheets(){$('#editor').hidden=true;$('#settings').hidden=true;$('#bagSheet').hidden=true;}
+function closeSheets(){$('#editor').hidden=true;$('#settings').hidden=true;$('#bagSheet').hidden=true;$('#mvSheet').hidden=true;}
 function dismiss(){if(!$('#editor').hidden)cancelEditor();closeSheets();}
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=dismiss);
 const PRESET={feedL:{t:'feed',side:'L'},feedR:{t:'feed',side:'R'},bottle:{t:'bottle'},pump:{t:'pump'},pee:{t:'diaper',pee:true,poop:false},poop:{t:'diaper',pee:false,poop:true},both:{t:'diaper',pee:true,poop:true},spit:{t:'spit'}};
