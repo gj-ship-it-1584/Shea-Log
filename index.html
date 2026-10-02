@@ -237,6 +237,16 @@ label.f{display:block;font-size:11.5px;letter-spacing:.09em;text-transform:upper
 .btn:active{filter:brightness(.95)}
 .btn.primary{background:var(--accent);color:var(--accent-ink)}
 .btn.danger{background:transparent;color:var(--bad);box-shadow:inset 0 0 0 1px var(--hair2);flex:0 0 auto;padding:0 18px}
+.row.future{opacity:.62}
+.row.future .ic{box-shadow:inset 0 0 0 1.5px currentColor;background:transparent}
+.row .plan{color:var(--accent);font-weight:700}
+.hero .nextp{margin-top:12px;padding-top:12px;border-top:1px solid var(--hair);font-size:13px;font-weight:600;color:var(--muted);line-height:1.45}
+.hero .nextp svg.i{width:16px;height:16px;color:var(--accent);vertical-align:-3px;margin-right:6px}
+.hero .nextp b{color:var(--text)}
+.lg{font-weight:800;margin-left:6px;white-space:nowrap}
+.lg.add{color:var(--ok)} .lg.use{color:var(--text)} .lg.discard{color:var(--bad)} .lg.freeze,.lg.thaw{color:var(--milk-ink)} .lg.adjust{color:var(--muted)}
+.ic.discard{background:var(--card2);color:var(--bad)} .ic.adjust{background:var(--card2);color:var(--muted)}
+.ledger-more{align-self:center;padding:0 18px}
 .btn:disabled{opacity:.45;pointer-events:none}
 .mvlist{display:flex;flex-direction:column;gap:6px}
 .mvrow{display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:14px;padding:11px 14px;font-size:14px;cursor:pointer}
@@ -579,7 +589,9 @@ function load(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(j){c
   return s;}}catch(e){}return defaults();}
 let S=load();
 function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
-const view={day:null,follow:true,tab:'log'};
+const view={day:null,follow:true,tab:'log',milk:'stock',milkLimit:60};
+/* the last day that has an entry, so you can page forward to days with planned feeds */
+function maxDay(){let m=today();for(const k of Object.keys(S.days))if(k>m&&dayEvents(k).length)m=k;return m;}
 
 /* ---------- time helpers ---------- */
 const pad2=n=>String(n).padStart(2,'0');
@@ -589,6 +601,7 @@ function shiftDay(key,n){const d=new Date(dayStart(key));d.setDate(d.getDate()+n
 function today(){return dayKey(Date.now());}
 function fmtTime(ms){const d=new Date(ms);let h=d.getHours();const ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+pad2(d.getMinutes())+' '+ap;}
 function fmtDate(key){const d=new Date(dayStart(key));return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
+function until(ms){const s=Math.max(0,ms-Date.now());const m=Math.round(s/60000);if(m<1)return'under a minute';if(m<60)return m+' min';const h=Math.floor(m/60);if(h<24)return h+'h '+pad2(m%60)+'m';const d=Math.floor(h/24);return d+(d===1?' day ':' days ')+(h%24)+'h';}
 function ago(ms){const s=Math.max(0,Date.now()-ms);const m=Math.floor(s/60000);if(m<1)return'now';if(m<60)return m+'m';const h=Math.floor(m/60);if(h<24)return h+'h '+pad2(m%60)+'m';const d=Math.floor(h/24);return d+'d '+(h%24)+'h';}
 function agoBig(ms){const s=Math.max(0,Date.now()-ms);const m=Math.floor(s/60000);if(m<1)return'<span>now</span>';if(m<60)return m+'<small>min</small>';const h=Math.floor(m/60);if(h<24)return h+'<small>h</small> '+pad2(m%60)+'<small>m</small>';const d=Math.floor(h/24);return d+'<small>d</small> '+(h%24)+'<small>h</small>';}
 function elapsed(ms){const s=Math.max(0,Math.floor((Date.now()-ms)/1000));const m=Math.floor(s/60);if(m>=60)return Math.floor(m/60)+':'+pad2(m%60)+':'+pad2(s%60);return m+':'+pad2(s%60);}
@@ -798,7 +811,7 @@ function bottleAdvice(at){const days=ageDays(at);const g=guideFor(days);const li
    added by hand. */
 function useBy(b){if(b.loc==='freezer')return b.at+180*DAY;if(b.thawedAt)return Math.min(b.thawedAt+DAY,b.at+180*DAY);return b.at+4*DAY;}
 function bagsNow(opts){opts=opts||{};const ov=(S.milk&&S.milk.bags)||{};const all=allEvents();const bags=[];
-  for(const e of all){if(e.t!=='pump')continue;const o=ov[e.id]||{};if(o.gone)continue;bags.push({id:e.id,at:e.at,oz:o.oz!=null?+o.oz:(+e.oz||0),loc:o.loc||e.to||'fridge',frozenAt:o.frozenAt||null,thawedAt:o.thawedAt||null,by:e.by,src:'pump'});}
+  const tNow=Date.now();for(const e of all){if(e.t!=='pump'||e.at>tNow)continue;const o=ov[e.id]||{};if(o.gone)continue;bags.push({id:e.id,at:e.at,oz:o.oz!=null?+o.oz:(+e.oz||0),loc:o.loc||e.to||'fridge',frozenAt:o.frozenAt||null,thawedAt:o.thawedAt||null,by:e.by,src:'pump'});}
   for(const [id,b] of Object.entries(ov)){if(!b.manual||b.gone)continue;const combo=!!(b.parts&&b.parts.length);bags.push({id,at:b.at||0,oz:+b.oz||0,loc:b.loc||'fridge',frozenAt:b.frozenAt||null,thawedAt:b.thawedAt||null,by:b.by,src:combo?'combo':'manual',parts:combo?b.parts:null,note:b.note});}
   const used={};for(const e of all){if(e.t!=='bottle'||e.src==='formula'||e.id===opts.exclude)continue;for(const f of (e.from||[]))used[f.bag]=(used[f.bag]||0)+(+f.oz||0);}
   /* milk poured into a combined freezer bag leaves its source bags, even if the combined bag is later discarded */
@@ -829,12 +842,12 @@ function updateBagHint(){const b=bg.bag;const p=$('#bgLoc [aria-pressed="true"]'
   else h.textContent=loc==='freezer'?'Good for about 6 months in the freezer.':'Fresh milk keeps 4 days in the fridge.';}
 function saveBag(){const oz=parseFloat($('#bgOz').value);if(isNaN(oz)||oz<=0){toast('Enter how many ounces');return;}const p=$('#bgLoc [aria-pressed="true"]');const loc=p?p.dataset.v:'fridge';const b=bg.bag;const now=Date.now();
   const icon=loc==='freezer'?ICON.snow:ICON.fridge;
-  if(b){const patch={loc,oz:round2(oz)};if(b.loc!==loc){if(loc==='freezer')patch.frozenAt=now;else patch.thawedAt=now;}
+  if(b){const patch={loc,oz:round2(oz)};if(round2(oz)!==round2(b.oz)){patch.prevOz=round2(b.oz);patch.editedAt=now;}if(b.loc!==loc){if(loc==='freezer')patch.frozenAt=now;else patch.thawedAt=now;}
     if(b.src==='manual'){const at=new Date($('#bgAt').value).getTime();if(!isNaN(at))patch.at=at;}
     setBag(b.id,patch);toast(b.loc!==loc?(loc==='freezer'?'Moved to the freezer':'Thawing in the fridge'):'Bag updated',null,null,{kind:'milk',icon,sub:fmtOz(oz)+' oz'});}
-  else{const at=new Date($('#bgAt').value).getTime();setBag(uid(),{manual:true,at:isNaN(at)?now:at,oz:round2(oz),loc,by:me()});toast('Milk added',null,null,{kind:'milk',icon,sub:fmtOz(oz)+' oz · '+loc});}
+  else{const at=new Date($('#bgAt').value).getTime();setBag(uid(),{manual:true,at:isNaN(at)?now:at,oz:round2(oz),addOz:round2(oz),loc,by:me()});toast('Milk added',null,null,{kind:'milk',icon,sub:fmtOz(oz)+' oz · '+loc});}
   $('#bagSheet').hidden=true;}
-function discardBag(){const b=bg.bag;if(!b||!confirm('Discard this bag? '+fmtOz(b.left)+' oz comes off the count.'))return;setBag(b.id,{gone:true});$('#bagSheet').hidden=true;toast('Bag discarded');}
+function discardBag(){const b=bg.bag;if(!b||!confirm('Discard this bag? '+fmtOz(b.left)+' oz comes off the count.'))return;setBag(b.id,{gone:true,goneAt:Date.now()});$('#bagSheet').hidden=true;toast('Bag discarded');}
 
 /* Move to freezer. Fills the requested ounces from fresh (never thawed) fridge bags,
    oldest pump first, skipping any bag the parent unticks. One source bag moved whole
@@ -871,9 +884,51 @@ $('#mvSheet').addEventListener('change',e=>{const c=e.target.closest('input[data
 $('#mvChips').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('#mvOz').value=fmtOz(parseFloat(b.dataset.oz));renderMove();});
 $('#mvGo').onclick=doMove;
 
+/* Milk history. Rebuilt from what is already stored: pumping and bottle entries, plus
+   each bag's record (combined freezer bags with their parts, moves, thaws, corrections,
+   discards). Undone combinations leave no trace. Entries planned for later are skipped. */
+function milkToggle(){return '<div class="seg" id="milkSeg"><button data-v="stock" aria-pressed="'+(view.milk!=='history')+'">In stock</button><button data-v="history" aria-pressed="'+(view.milk==='history')+'">History</button></div>';}
+function wireMilkToggle(){document.querySelectorAll('#milkSeg button').forEach(b=>b.onclick=()=>{view.milk=b.dataset.v;view.milkLimit=60;render();});}
+function milkLedger(now){const ov=(S.milk&&S.milk.bags)||{};const all=allEvents();const out=[];const pump={};for(const e of all)if(e.t==='pump')pump[e.id]=e;
+  const short=at=>fmtDate(dayKey(at)).replace(/^\w+, /,'');
+  const bagAt=id=>pump[id]?pump[id].at:(ov[id]&&ov[id].at);
+  const src=id=>{const at=bagAt(id);return at?short(at)+' '+fmtTime(at):'an older bag';};
+  const usedBefore=(id,t)=>{let u=0;for(const e of all){if(e.t==='bottle'&&e.src!=='formula'&&e.at<=t)for(const f of (e.from||[]))if(f.bag===id)u+=+f.oz||0;}for(const b of Object.values(ov)){if((b.frozenAt||0)<=t)for(const p of (b.parts||[]))if(p.bag===id)u+=+p.oz||0;}return round2(u);};
+  const base=id=>{const o=ov[id]||{};if(pump[id])return o.oz!=null?+o.oz:(+pump[id].oz||0);return +o.oz||0;};
+  for(const e of all){if(e.at>now)continue;
+    if(e.t==='pump')out.push({at:e.at,kind:'add',oz:+e.oz||0,title:'Pumped',detail:'L '+fmtOz(e.L||0)+' · R '+fmtOz(e.R||0)+' · into '+(e.to==='freezer'?'freezer':'fridge'),by:e.by,ev:e,icon:ICON.pump,freezer:e.to==='freezer'});
+    if(e.t==='bottle'&&e.src!=='formula'){const f=e.from||[];out.push({at:e.at,kind:'use',oz:-(+e.oz||0),title:'Bottle given',detail:f.length?'from '+f.map(x=>fmtOz(x.oz)+' oz ('+src(x.bag)+')').join(' + '):'not drawn from the fridge count',by:e.by,ev:e,icon:ICON.bottle});}}
+  for(const [id,b] of Object.entries(ov)){if(!b||typeof b!=='object')continue;
+    const undone=b.manual&&b.gone&&Array.isArray(b.parts)&&b.parts.length===0;if(undone)continue;
+    const combo=!!(b.parts&&b.parts.length);const pe=pump[id];if(!pe&&!b.manual)continue;
+    if(b.manual&&!combo&&b.at<=now)out.push({at:b.at,kind:'add',oz:+(b.addOz!=null?b.addOz:b.oz)||0,title:'Added by hand',detail:'into '+(b.loc==='freezer'&&!b.frozenAt?'freezer':'fridge'),by:b.by,bag:id,icon:ICON.plus});
+    if(combo)out.push({at:b.frozenAt||b.at,kind:'freeze',oz:round2(b.parts.reduce((t,p)=>t+(+p.oz||0),0)),title:'Moved to freezer',detail:b.parts.map(p=>fmtOz(p.oz)+' oz ('+src(p.bag)+')').join(' + ')+' · one combined bag',by:b.by,bag:id,icon:ICON.snow});
+    else if(b.frozenAt&&(pe?pe.to!=='freezer':true)){const amt=round2(base(id)-usedBefore(id,b.frozenAt));out.push({at:b.frozenAt,kind:'freeze',oz:amt,title:'Moved to freezer',detail:'whole bag ('+src(id)+')',bag:id,icon:ICON.snow});}
+    if(b.thawedAt){const amt=round2(base(id)-usedBefore(id,b.thawedAt));out.push({at:b.thawedAt,kind:'thaw',oz:amt,title:'Thawed in the fridge',detail:(combo?'combined bag':'bag')+' from '+src(id)+' · use within 24 hours',bag:id,icon:ICON.fridge});}
+    const editedAt=b.editedAt||(pe&&b.oz!=null&&round2(+b.oz)!==round2(+pe.oz)?b.u:null);const prev=b.prevOz!=null?+b.prevOz:(pe?+pe.oz:null);
+    if(editedAt&&prev!=null&&b.oz!=null&&round2(+b.oz)!==round2(prev))out.push({at:editedAt,kind:'adjust',oz:round2(+b.oz-prev),title:'Amount corrected',detail:'was '+fmtOz(prev)+' oz, now '+fmtOz(b.oz)+' oz ('+src(id)+')',bag:id,icon:'<svg class="i"><use href="#i-sliders"/></svg>'});
+    if(b.gone){const at=b.goneAt||b.u||now;const left=round2(Math.max(0,base(id)-usedBefore(id,at)));out.push({at,kind:'discard',oz:-left,title:'Discarded',detail:(combo?'combined bag':'bag')+' from '+src(id),bag:id,icon:'<svg class="i"><use href="#i-trash"/></svg>'});}}
+  return out.filter(x=>x.at<=now).sort((a,b)=>b.at-a.at);}
+function renderMilkHistory(now){const el=$('#tabMilk');const L=milkLedger(now);const wk=now-7*DAY;const w=L.filter(x=>x.at>=wk);
+  const tot=f=>round2(w.filter(f).reduce((t,x)=>t+Math.abs(x.oz),0));
+  const added=tot(x=>x.kind==='add'),bottled=tot(x=>x.kind==='use'),frozen=tot(x=>x.kind==='freeze'||(x.kind==='add'&&x.freezer)),gone=tot(x=>x.kind==='discard');
+  const sign=x=>x.kind==='add'?'+'+fmtOz(x.oz):x.kind==='use'||x.kind==='discard'?'−'+fmtOz(Math.abs(x.oz)):x.kind==='adjust'?(x.oz>0?'+':'−')+fmtOz(Math.abs(x.oz)):fmtOz(x.oz);
+  const shown=L.slice(0,view.milkLimit);const groups=[];for(const x of shown){const k=dayKey(x.at);let g=groups[groups.length-1];if(!g||g.k!==k){g={k,items:[]};groups.push(g);}g.items.push(x);}
+  const t=today();const dayName=k=>k===t?'Today':k===shiftDay(t,-1)?'Yesterday':fmtDate(k);
+  let i=0;const ref=[];
+  const rows=g=>g.items.map(x=>{ref.push(x);const n=i++;const icCls=x.kind==='discard'?'discard':x.kind==='adjust'?'adjust':'milk';
+    return '<button class="row ledger" data-n="'+n+'"><div class="t num">'+fmtTime(x.at).replace(/ (AM|PM)/,'<small>$1</small>')+'</div><div class="ic '+icCls+'">'+x.icon+'</div><div><div class="title">'+x.title+'<span class="lg '+x.kind+'">'+sign(x)+' oz</span></div><div class="meta">'+esc(x.detail)+(x.by?' · '+esc(who(x.by)):'')+'</div></div></button>';}).join('');
+  el.innerHTML=milkToggle()+
+    '<section class="counts"><div><b class="num">'+fmtOz(added)+'</b><span>oz added · 7d</span></div><div><b class="num">'+fmtOz(bottled)+'</b><span>oz bottled</span></div><div><b class="num">'+fmtOz(frozen)+'</b><span>oz frozen</span></div><div><b class="num">'+fmtOz(gone)+'</b><span>oz discarded</span></div></section>'+
+    (groups.length?groups.map(g=>'<section class="tl"><div class="tl-head"><h2>'+dayName(g.k)+'</h2></div>'+rows(g)+'</section>').join(''):'<section class="tl"><div class="none">No milk activity yet. Pumping sessions, bottles of breast milk, moves to the freezer and discards all show up here.</div></section>')+
+    (L.length>shown.length?'<button class="btn sm ledger-more" id="ledgerMore">Show older</button>':'')+
+    '<p class="hint" style="padding:0 6px">Every ounce in and out of your stock: pumped or added by hand, given in a bottle, moved to the freezer, thawed, corrected, or discarded. Tap a pumping session or bottle to edit it, or a bag event to open that bag.</p>';
+  wireMilkToggle();const more=$('#ledgerMore');if(more)more.onclick=()=>{view.milkLimit+=60;render();};
+  el.querySelectorAll('.row.ledger').forEach(r=>r.onclick=()=>{const x=ref[+r.dataset.n];if(!x)return;if(x.ev){const cur=(S.days[dayKey(x.ev.at)]||{events:{}}).events[x.ev.id];if(cur&&!cur.del)openEditor(cur);return;}if(x.bag&&bagsNow().some(b=>b.id===x.bag))openBag(x.bag);else toast('That bag is used up or discarded');});}
+
 /* targets for one day: count vs. minimum, with pace awareness for today */
-function targetsFor(dk,now){const isT=dk===today();const days=ageDays(dayStart(dk));const g=guideFor(days);const de=dayEvents(dk);
-  const nSes=sessions(allEvents().filter(e=>e.t==='feed'||e.t==='bottle'),now).filter(s=>dayKey(s.start)===dk).length;
+function targetsFor(dk,now){const isT=dk===today();const days=ageDays(dayStart(dk));const g=guideFor(days);const de=dayEvents(dk).filter(e=>e.at<=now);
+  const nSes=sessions(allEvents().filter(e=>(e.t==='feed'||e.t==='bottle')&&e.at<=now),now).filter(s=>dayKey(s.start)===dk).length;
   const wet=de.filter(e=>e.t==='diaper'&&e.pee).length,dirty=de.filter(e=>e.t==='diaper'&&e.poop).length;
   const frac=isT?Math.min(1,(now-dayStart(dk))/DAY):1;
   const row=(label,cls,count,min,max)=>{const pace=Math.floor(min*frac);let st,txt;
@@ -884,7 +939,7 @@ function targetsFor(dk,now){const isT=dk===today();const days=ageDays(dayStart(d
     return{label,cls,count,min,max,st,txt,pct:Math.min(100,Math.round(count/min*100))};};
   return{days,g,rows:[row('Feeds','feed',nSes,g.feedsMin,g.feedsMax),row('Wet','pee',wet,g.wet,null),row('Dirty','poop',dirty,g.dirty,null)]};}
 
-function renderMilk(now){const el=$('#tabMilk');const st=stock();
+function renderMilk(now){if(view.milk==='history'){renderMilkHistory(now);return;}const el=$('#tabMilk');const st=stock();
   const bagRow=b=>{const s=bagStatus(b,now);const when=fmtDate(dayKey(b.at))+' '+fmtTime(b.at);
     return '<button class="row bagrow" data-bag="'+b.id+'"><div class="t num">'+fmtOz(b.left)+'<small>oz</small></div><div class="ic milk">'+(b.loc==='freezer'?ICON.snow:ICON.fridge)+'</div><div><div class="title">'+(b.used?fmtOz(b.left)+' of '+fmtOz(b.oz)+' oz left':fmtOz(b.oz)+' oz')+(b.thawedAt?' · thawed':'')+'</div><div class="meta">'+(b.src==='combo'?'Combined from '+b.parts.length+' bags · oldest '+when:(b.src==='manual'?'Added ':'Pumped ')+when)+(b.by?' · '+esc(who(b.by)):'')+' · <span class="'+s.cls+'">'+s.text+'</span></div></div></button>';};
   const list=(title,arr,empty,act)=>'<section class="tl"><div class="tl-head"><h2>'+title+'</h2>'+(act||'')+'</div>'+(arr.length?arr.map(bagRow).join(''):'<div class="none">'+empty+'</div>')+'</section>';
@@ -892,14 +947,14 @@ function renderMilk(now){const el=$('#tabMilk');const st=stock();
   const sum=(arr,k)=>round2(arr.reduce((t,e)=>t+(+e[k]||0),0));
   const pOz=sum(pumps,'oz'),pL=sum(pumps,'L'),pR=sum(pumps,'R'),bBm=sum(bots.filter(e=>e.src!=='formula'),'oz'),bF=sum(bots.filter(e=>e.src==='formula'),'oz');
   const fridgeSorted=st.fridge.slice().sort((a,b)=>a.useBy-b.useBy);const oldest=fridgeSorted[0];
-  el.innerHTML='<section class="mtiles"><div class="mt"><div class="l">'+ICON.fridge+'Fridge</div><b class="num">'+fmtOz(st.fridgeOz)+'<small>oz</small></b><span>'+(st.fridge.length?st.fridge.length+(st.fridge.length===1?' bag':' bags')+(oldest?' · '+bagStatus(oldest,now).text:''):'empty')+'</span></div>'+
+  el.innerHTML=milkToggle()+'<section class="mtiles"><div class="mt"><div class="l">'+ICON.fridge+'Fridge</div><b class="num">'+fmtOz(st.fridgeOz)+'<small>oz</small></b><span>'+(st.fridge.length?st.fridge.length+(st.fridge.length===1?' bag':' bags')+(oldest?' · '+bagStatus(oldest,now).text:''):'empty')+'</span></div>'+
     '<div class="mt"><div class="l">'+ICON.snow+'Freezer</div><b class="num">'+fmtOz(st.freezerOz)+'<small>oz</small></b><span>'+(st.freezer.length?st.freezer.length+(st.freezer.length===1?' bag':' bags'):'empty')+'</span></div></section>'+
     list('In the fridge',fridgeSorted,'Nothing in the fridge. Log a pumping session and it lands here.',moveCandidates().length?'<button class="linkbtn" id="moveBtn">'+ICON.snow+'Move to freezer</button>':'')+
     list('In the freezer',st.freezer,'Nothing frozen. Tap a fridge bag to move it here.')+
     '<button class="btn sm" id="addBag" style="align-self:center;padding:0 18px">'+ICON.plus+'Add milk by hand</button>'+
     '<section class="counts"><div><b class="num">'+fmtOz(pOz)+'</b><span>oz pumped · 7d</span>'+(pOz?'<i class="extra">L '+fmtOz(pL)+' · R '+fmtOz(pR)+'</i>':'')+'</div><div><b class="num">'+pumps.length+'</b><span>sessions</span></div><div><b class="num">'+fmtOz(bBm)+'</b><span>oz bottled</span>'+(bF?'<i class="extra">+ '+fmtOz(bF)+' formula</i>':'')+'</div><div><b class="num">'+bots.length+'</b><span>bottles</span></div></section>'+
     '<p class="hint" style="padding:0 6px">Fresh milk keeps 4 days in the fridge and about 6 months in the freezer. Thawed milk: 24 hours in the fridge, never refrozen. Bottles of breast milk come out of the fridge count automatically, soonest-to-expire first. Move to freezer pours the oldest fridge milk into one freezer bag, dated from its oldest milk. Tap a bag to move, thaw, edit or discard it.</p>';
-  const mb=$('#moveBtn');if(mb)mb.onclick=openMove;
+  const mb=$('#moveBtn');if(mb)mb.onclick=openMove;wireMilkToggle();
   el.querySelectorAll('.bagrow').forEach(r=>r.onclick=()=>openBag(r.dataset.bag));$('#addBag').onclick=()=>openBag(null);}
 
 function renderTargets(now){const el=$('#tabTargets');const dk=view.day;const isT=dk===today();const T=targetsFor(dk,now);const g=T.g;const days=T.days;
@@ -924,21 +979,22 @@ function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===view.tab)));
   $('#tabLog').hidden=view.tab!=='log';$('#tabMilk').hidden=view.tab!=='milk';$('#tabTargets').hidden=view.tab!=='targets';
   $('#daynav').hidden=view.tab==='milk';
-  $('#dayLabel').innerHTML=(isToday?'Today':view.day===shiftDay(t,-1)?'Yesterday':fmtDate(view.day))+'<small>'+(isToday?fmtDate(t):'tap for today')+'</small>';
-  $('#nextDay').disabled=isToday;
+  $('#dayLabel').innerHTML=(isToday?'Today':view.day===shiftDay(t,-1)?'Yesterday':view.day===shiftDay(t,1)?'Tomorrow':fmtDate(view.day))+'<small>'+(isToday?fmtDate(t):'tap for today')+'</small>';
+  $('#nextDay').disabled=view.day>=maxDay();
   $('#pad').hidden=!isToday;document.documentElement.style.setProperty('--toast-b',isToday?'172px':'20px');
   $('#app').style.paddingBottom=isToday?'':'32px';
   if(view.tab==='milk'){renderMilk(now);ensureSubs();return;}
   if(view.tab==='targets'){renderTargets(now);ensureSubs();return;}
   $('#logTitle').textContent=isToday?'Today':fmtDate(view.day);
 
-  const all=allEvents();const rev=all.slice().reverse();
+  const everything=allEvents();const all=everything.filter(e=>e.at<=now);const rev=all.slice().reverse();
+  const nextPlan=everything.find(e=>e.at>now&&(e.t==='feed'||e.t==='bottle'));
   const lastWet=rev.find(e=>e.t==='diaper'&&e.pee),lastDirty=rev.find(e=>e.t==='diaper'&&e.poop);
   const a=S.active;
   const allFeeds=all.filter(e=>e.t==='feed'||e.t==='bottle');const ses=sessions(allFeeds,now);const lastSes=ses[ses.length-1]||null;
   const sesIdx=new Map();for(const s of ses)s.feeds.forEach((e,i)=>sesIdx.set(e.id,{s,i}));
   activePrior=(a&&lastSes&&lastSes.active)?lastSes.feeds.filter(e=>e.id!==a.id).flatMap(e=>segsOf(e)||[]).map(g=>SIDE[g.s]+' '+mins(g.sec)+'m').join(' → '):'';
-  const de=dayEvents(view.day);
+  const deAll=dayEvents(view.day);const de=deAll.filter(e=>e.at<=now);
   const daySes=ses.filter(s=>dayKey(s.start)===view.day);
   const latches=de.filter(e=>e.t==='feed'||e.t==='bottle').length;
   const n={feeds:daySes.length,L:de.filter(e=>e.t==='feed'&&(e.side||'').includes('L')).length,R:de.filter(e=>e.t==='feed'&&(e.side||'').includes('R')).length,wet:de.filter(e=>e.t==='diaper'&&e.pee).length,dirty:de.filter(e=>e.t==='diaper'&&e.poop).length,spit:de.filter(e=>e.t==='spit').length};
@@ -971,6 +1027,7 @@ function render(){
     hero.innerHTML='<div class="eyebrow"><i class="k feed"></i>Since last feed</div><div class="empty">Nothing logged yet. Tap <b>L</b> or <b>R</b> when '+esc(first)+' latches, <b>Bottle</b> for a bottle, or <b>Earlier</b> to backfill.</div>';
   }
 
+  if(isToday&&nextPlan&&!hero.hidden){const np=nextPlan;hero.insertAdjacentHTML('beforeend','<div class="nextp"><svg class="i"><use href="#i-clock"/></svg>Next planned: <b>'+(np.t==='bottle'?'Bottle · '+fmtOz(np.oz)+' oz':'Feed · '+sideName(np.side))+'</b> at '+fmtTime(np.at)+(dayKey(np.at)!==t?' '+fmtDate(dayKey(np.at)):'')+' · in '+until(np.at)+'</div>');}
   // since tiles
   const since=$('#since');
   if(!isToday){since.hidden=true;since.innerHTML='';}
@@ -984,9 +1041,9 @@ function render(){
   // timeline
   const wrap=$('#logWrap');
   const sesBits=e=>{const si=sesIdx.get(e.id);if(!si||si.s.parts<2)return{cls:'',m:null};const top=si.i===si.s.parts-1,bot=si.i===0;return{cls:' ses '+(top?'ses-top':bot?'ses-bot':'ses-mid'),m:top?(si.s.active?null:'<span class="ses-sum">Session '+fmtSession(si.s)+'</span>'):'<span class="ses-sum">same session</span>'};};
-  if(!de.length){wrap.innerHTML='<div class="none">'+(isToday?'No entries yet today.':'No entries on this day.')+'</div>';}
+  if(!deAll.length){wrap.innerHTML='<div class="none">'+(isToday?'No entries yet today.':view.day>t?'Nothing planned for this day.':'No entries on this day.')+'</div>';}
   else{
-    wrap.innerHTML=de.slice().reverse().map(e=>{
+    wrap.innerHTML=deAll.slice().reverse().map(e=>{const fut=e.at>now;
       let ic,title,meta=[],cls='';
       if(e.t==='feed'){const s=e.side||'';ic='<div class="ic feed">'+(s.length>1?s.slice(0,2):s||'?')+'</div>';title='Feed · '+sideName(s);
         if(a&&a.id===e.id)meta.push('<span class="live">'+(a.paused?'Paused':'In progress')+'</span>');else if(fmtSplit(e))meta.push(fmtSplit(e));
@@ -997,6 +1054,7 @@ function render(){
       else{ic='<div class="ic spit">'+ICON.spit+'</div>';title='Spit-up';}
       if(e.photos&&e.photos.length)meta.push('<svg class="i cam"><use href="#i-cam"/></svg>'+e.photos.length);
       if(e.note)meta.push(esc(e.note));if(e.by)meta.push(esc(who(e.by)));
+      if(fut){cls=' future';meta.unshift('<span class="plan">Planned · in '+until(e.at)+'</span>');}
       return '<button class="row'+cls+'" data-id="'+e.id+'"><div class="t num">'+fmtTime(e.at).replace(/ (AM|PM)/,'<small>$1</small>')+'</div>'+ic+'<div><div class="title">'+title+'</div>'+(meta.length?'<div class="meta">'+meta.join(' · ')+'</div>':'')+'</div></button>';
     }).join('');
     wrap.querySelectorAll('.row').forEach(r=>r.onclick=()=>{const ev=(S.days[view.day]||{events:{}}).events[r.dataset.id];if(ev)openEditor(ev);});
@@ -1060,7 +1118,7 @@ function closeLightbox(){$('#lightbox').hidden=true;$('#lbImg').removeAttribute(
 $('#lbClose').onclick=closeLightbox;
 $('#lbDel').onclick=()=>{if(!lbId||!confirm('Delete this photo?'))return;const id=lbId;closeLightbox();ed.ev.photos=(ed.ev.photos||[]).filter(x=>x!==id);ed.added=ed.added.filter(x=>x!==id);discardPhoto(id);persistPhotos();renderPhotoStrip();toast('Photo deleted');};
 function cancelEditor(){if(ed.ev&&ed.isNew&&ed.added&&ed.added.length){for(const id of ed.added)discardPhoto(id);}ed.added=[];}
-function updateAtHint(){updateBottleHint();const ms=new Date($('#edAt').value).getTime();const h=$('#edAtHint');if(isNaN(ms)){h.textContent='';return;}const diff=Date.now()-ms;h.textContent=diff<60000&&diff>-60000?'Right now':diff>0?ago(ms)+' ago · '+fmtTime(ms)+(dayKey(ms)!==today()?' '+fmtDate(dayKey(ms)):''):'In the future';}
+function updateAtHint(){updateBottleHint();const ms=new Date($('#edAt').value).getTime();const h=$('#edAtHint');if(isNaN(ms)){h.textContent='';return;}const diff=Date.now()-ms;h.textContent=diff<60000&&diff>-60000?'Right now':diff>0?ago(ms)+' ago · '+fmtTime(ms)+(dayKey(ms)!==today()?' '+fmtDate(dayKey(ms)):''):'In '+until(ms)+' · '+fmtTime(ms)+(dayKey(ms)!==today()?' '+fmtDate(dayKey(ms)):'')+' · saving will ask you to confirm';}
 $('#edChips').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('#edAt').value=toLocalInput(Date.now()-parseInt(b.dataset.m,10)*60000);updateAtHint();});
 $('#edAt').addEventListener('input',updateAtHint);
 function showTypeFields(){const t=ed.ev.t;$('#edFeed').hidden=t!=='feed';$('#edBottle').hidden=t!=='bottle';$('#edPump').hidden=t!=='pump';$('#edDiaper').hidden=t!=='diaper';$('#edPhotos').hidden=!(t==='diaper'||t==='spit');if(t==='bottle')updateBottleHint();}
@@ -1079,7 +1137,9 @@ function readDurs(){return [...document.querySelectorAll('#edDurs input')].map(i
 function updateTot(){const t=$('#edTot');if(!t)return;const s=readDurs().reduce((a,n)=>a+(n||0),0);t.textContent=s?'Total '+s+' min':'';}
 function saveEditor(){
   const e=ed.ev;const at=new Date($('#edAt').value).getTime();if(isNaN(at)){toast('Please pick a time');return;}
-  if(at>Date.now()+5*60000){toast("That time hasn't happened yet");return;}
+  const future=at>Date.now()+5*60000;
+  if(future){const WHAT={feed:'feed',bottle:'bottle',pump:'pumping session',diaper:'diaper',spit:'spit-up'};const when=fmtTime(at)+(dayKey(at)!==today()?' on '+fmtDate(dayKey(at)):'');
+    if(!confirm('That time is '+until(at)+' from now.\n\nBook this '+(WHAT[e.t]||'entry')+' for '+when+'?'))return;}
   const out={id:e.id,t:e.t,at,by:e.by||me()};
   const note=$('#edNote').value.trim();if(note)out.note=note;
   if((e.t==='diaper'||e.t==='spit')&&e.photos&&e.photos.length)out.photos=e.photos.slice();else if(e.photos&&e.photos.length){for(const id of e.photos)discardPhoto(id);}
@@ -1095,7 +1155,7 @@ function saveEditor(){
   ed.added=[];putEvent(out,ed.prevDay);closeSheets();
   const K={feed:{kind:'feed',icon:(out.side||'L').slice(0,2)},bottle:{kind:'milk',icon:ICON.bottle},pump:{kind:'milk',icon:ICON.pump},diaper:{kind:out.pee&&out.poop?'both':out.pee?'pee':'poop'},spit:{kind:'spit'}}[out.t]||{};
   const ttl=out.t==='bottle'?'Bottle · '+fmtOz(out.oz)+' oz':out.t==='pump'?'Pumped · '+fmtOz(out.oz)+' oz':out.t==='feed'?'Feed · '+sideName(out.side):out.t==='diaper'?(out.pee&&out.poop?'Wet + dirty diaper':out.pee?'Wet diaper':'Dirty diaper'):'Spit-up';
-  toast(ed.isNew?ttl:'Saved',ed.isNew?()=>delEvent(out):null,null,Object.assign({sub:(ed.isNew?'Logged ':'')+fmtTime(at)},K));
+  toast(future?'Planned · '+ttl:ed.isNew?ttl:'Saved',ed.isNew?()=>delEvent(out):null,null,Object.assign({sub:future?'for '+fmtTime(at)+(dayKey(at)!==today()?' '+fmtDate(dayKey(at)):'')+' · in '+until(at):(ed.isNew?'Logged ':'')+fmtTime(at)},K));
 }
 
 /* ---------- settings ---------- */
@@ -1186,7 +1246,7 @@ function summaryText(){
   return [name+' · '+fmtDate(view.day)+(view.day===today()&&ageText()?' · '+ageText():''),
     'Feeds: '+nSes+(feeds.length+bots.length>nSes?' ('+(feeds.length+bots.length)+' parts)':'')+(tot?' · '+tot+' min nursing'+((sm.L||sm.R)?' (L '+Math.round(sm.L)+' / R '+Math.round(sm.R)+')':''):'')+(bOz?' · '+fmtOz(bOz)+' oz by bottle':''),
     'Wet: '+wet+' · Dirty: '+dirty+' · Spit-up: '+spit+(pOz?' · Pumped: '+fmtOz(pOz)+' oz':''),'',
-    ...de.map(e=>fmtTime(e.at)+'  '+line(e)+(e.note?' – '+e.note:'')+(e.by?' ('+who(e.by)+')':''))].join('\n');
+    ...de.map(e=>fmtTime(e.at)+'  '+line(e)+(e.at>Date.now()?' (planned)':'')+(e.note?' – '+e.note:'')+(e.by?' ('+who(e.by)+')':''))].join('\n');
 }
 async function shareSummary(){const text=summaryText();if(navigator.share){try{await navigator.share({text});return;}catch(e){if(e.name==='AbortError')return;}}copyText(text);}
 async function exportCsv(){
@@ -1217,7 +1277,7 @@ $('#pad').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;view.tab=b.dataset.tab;render();window.scrollTo(0,0);});
 $('#bgSave').onclick=saveBag;$('#bgDiscard').onclick=discardBag;
 $('#prevDay').onclick=()=>{view.day=shiftDay(view.day,-1);view.follow=false;render();};
-$('#nextDay').onclick=()=>{if(view.day<today()){view.day=shiftDay(view.day,1);view.follow=view.day===today();render();}};
+$('#nextDay').onclick=()=>{if(view.day<maxDay()){view.day=shiftDay(view.day,1);view.follow=view.day===today();render();}};
 $('#dayLabel').onclick=()=>{view.follow=true;render();};
 $('#addEntry').onclick=()=>openEditor(null);
 $('#edSave').onclick=saveEditor;
