@@ -247,6 +247,62 @@ label.f{display:block;font-size:11.5px;letter-spacing:.09em;text-transform:upper
 .lg.add{color:var(--ok)} .lg.use{color:var(--text)} .lg.discard{color:var(--bad)} .lg.freeze,.lg.thaw{color:var(--milk-ink)} .lg.adjust{color:var(--muted)}
 .ic.discard{background:var(--card2);color:var(--bad)} .ic.adjust{background:var(--card2);color:var(--muted)}
 .ledger-more{align-self:center;padding:0 18px}
+.dock button{position:relative}
+.dock .feed.next::after{content:"next";position:absolute;top:5px;right:6px;font-size:8.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;background:var(--feed);color:#fff;border-radius:6px;padding:2px 5px;line-height:1.2}
+.hero .nside{margin-top:10px;font-size:13.5px;font-weight:600;color:var(--muted);line-height:1.45}
+.hero .nside b{color:var(--feed-ink)}
+/* charts */
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart text{font-family:inherit;font-size:10px;fill:var(--muted);font-weight:600}
+.chart .grid{stroke:var(--hair);stroke-width:1}
+.chart .base{stroke:var(--hair2);stroke-width:1}
+.chart .band1{fill:var(--accent);opacity:.07}
+.chart .band2{fill:var(--accent);opacity:.10}
+.chart .pc{fill:none;stroke:var(--muted);stroke-width:1;opacity:.45}
+.chart .pc.mid{opacity:.8;stroke-width:1.25}
+.chart .me{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .dot{fill:var(--accent);stroke:var(--card);stroke-width:2}
+.chart .dot.sel{r:6.5}
+.chart .hit{fill:transparent;cursor:pointer}
+.chart .b-feed{fill:var(--feed)} .chart .b-pee{fill:var(--pee)} .chart .b-poop{fill:var(--poop)} .chart .b-milk{fill:var(--milk)}
+.chart .partial{opacity:.45}
+.chart .barsel{stroke:var(--text);stroke-width:1.5}
+.chart .tline{stroke:var(--text);stroke-width:1;stroke-dasharray:3 3;opacity:.55}
+.chart .tlab{fill:var(--text);opacity:.7}
+.chartbox{margin-top:14px}
+.chartbox .ch-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.chartbox .ch-h b{font-size:14px}
+.chartbox .ch-h span{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+.chartbox .cap{font-size:12.5px;color:var(--muted);font-weight:600;min-height:18px;margin-top:2px}
+.chartbox .cap b{color:var(--text)}
+.chartbox+.chartbox{border-top:1px solid var(--hair);padding-top:14px}
+/* growth */
+.gbig{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:8px}
+.gbig b{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+.gbig span{font-size:14px;font-weight:700;color:var(--accent)}
+.gsub{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.gsub div{background:var(--card2);border-radius:14px;padding:10px 12px}
+.gsub div b{display:block;font-size:17px;font-weight:800}
+.gsub div span{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.ic.grow{background:var(--accent-soft);color:var(--accent)}
+.lbin{display:flex;gap:10px}
+.lbin label{flex:1;display:flex;align-items:center;gap:8px;background:var(--card2);border-radius:14px;padding:6px 12px 6px 14px;font-weight:700;font-size:14px;color:var(--muted)}
+.lbin input{background:var(--card);text-align:center;font-weight:700;font-size:16px;padding:10px 6px;flex:1;min-width:0}
+/* journal */
+.jcard{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px 18px;text-align:left;width:100%;display:block}
+.jcard:active{background:var(--press)}
+.jcard .jd{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.jcard h3{font-family:"Fraunces",Georgia,serif;font-weight:500;font-size:22px;letter-spacing:-.01em;margin-top:4px}
+.jcard p{margin:6px 0 0;font-size:14.5px;line-height:1.5;color:var(--text);white-space:pre-wrap}
+.jgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.jgrid.one{grid-template-columns:1fr}
+.jgrid.two{grid-template-columns:1fr 1fr}
+.jgrid .ph{aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--card2);position:relative}
+.jgrid.one .ph{aspect-ratio:4/3}
+.jgrid .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.jgrid .ph.loading::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:shimmer 1.2s infinite}
+textarea.plain{font-family:inherit;font-size:15px;min-height:90px;line-height:1.45}
+.jstart{display:flex;flex-direction:column;gap:12px}
 .btn:disabled{opacity:.45;pointer-events:none}
 .mvlist{display:flex;flex-direction:column;gap:6px}
 .mvrow{display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:14px;padding:11px 14px;font-size:14px;cursor:pointer}
@@ -286,7 +342,7 @@ ol.steps b{color:var(--text)}
 
 /* tabs, milk, targets */
 .tabs{display:flex;background:var(--card);border-radius:14px;padding:4px;box-shadow:var(--shadow);gap:4px}
-.tabs button{flex:1;height:38px;border-radius:10px;font-weight:700;font-size:14px;color:var(--muted)}
+.tabs button{flex:1;min-width:0;height:38px;border-radius:10px;font-weight:700;font-size:13px;color:var(--muted);padding:0 2px}
 .tabs button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
 .stack{display:flex;flex-direction:column;gap:16px}
 .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:18px 20px}
@@ -376,6 +432,8 @@ table.gt tr:last-child td{border-bottom:0}
     <button data-tab="log" aria-pressed="true">Log</button>
     <button data-tab="milk" aria-pressed="false">Milk</button>
     <button data-tab="targets" aria-pressed="false">Targets</button>
+    <button data-tab="growth" aria-pressed="false">Growth</button>
+    <button data-tab="journal" aria-pressed="false">Journal</button>
   </nav>
 
   <nav class="daynav" id="daynav" aria-label="Day">
@@ -396,6 +454,8 @@ table.gt tr:last-child td{border-bottom:0}
   </div>
   <div class="stack" id="tabMilk" hidden></div>
   <div class="stack" id="tabTargets" hidden></div>
+  <div class="stack" id="tabGrowth" hidden></div>
+  <div class="stack" id="tabJournal" hidden></div>
 </div>
 
 <div class="dock" id="pad">
@@ -501,7 +561,7 @@ table.gt tr:last-child td{border-bottom:0}
     <div class="sect">
       <h3>Targets</h3>
       <p class="hint">Leave a box blank to use the age-based guidance shown on the Targets tab. These are shared with your partner's phone.</p>
-      <label class="f">Her weight in lb (optional · for daily intake)</label>
+      <label class="f">Her weight in lb (optional · the Growth tab's latest weight is used when there is one)</label>
       <input type="number" id="tgWeight" step="0.1" min="0" inputmode="decimal" placeholder="e.g. 7.5">
       <label class="f">Minimums per day</label>
       <div class="durs three"><label><span>Wet</span><input type="number" id="tgWet" inputmode="numeric" min="0" placeholder="auto"></label><label><span>Dirty</span><input type="number" id="tgDirty" inputmode="numeric" min="0" placeholder="auto"></label><label><span>Feeds</span><input type="number" id="tgFeeds" inputmode="numeric" min="0" placeholder="auto"></label></div>
@@ -565,6 +625,42 @@ table.gt tr:last-child td{border-bottom:0}
   </div>
 </div>
 
+<div class="sheet" id="grSheet" hidden>
+  <div class="bg" data-close></div>
+  <div class="panel" role="dialog" aria-labelledby="grTitle">
+    <div class="grab"></div>
+    <div class="toprow"><h2 id="grTitle">Add measurement</h2><button class="x" data-close aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <label class="f">Date</label>
+    <input type="date" id="grDate">
+    <label class="f">Weight</label>
+    <div class="lbin"><label><input type="number" id="grLb" inputmode="numeric" min="0" max="40" placeholder="—">lb</label><label><input type="number" id="grOz" inputmode="decimal" step="0.1" min="0" max="15.9" placeholder="—">oz</label></div>
+    <label class="f">Length and head (optional)</label>
+    <div class="lbin"><label><input type="number" id="grLen" inputmode="decimal" step="0.1" min="0" placeholder="—">in long</label><label><input type="number" id="grHead" inputmode="decimal" step="0.1" min="0" placeholder="—">in head</label></div>
+    <label class="f">Note (optional)</label>
+    <input id="grNote" placeholder="2-week checkup, home scale…" autocomplete="off">
+    <div class="rowb"><button class="btn danger" id="grDelete">Delete</button><button class="btn primary" id="grSave">Save</button></div>
+  </div>
+</div>
+
+<div class="sheet" id="jSheet" hidden>
+  <div class="bg" data-close></div>
+  <div class="panel" role="dialog" aria-labelledby="jTitle">
+    <div class="grab"></div>
+    <div class="toprow"><h2 id="jTitle">New moment</h2><button class="x" data-close aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <label class="f">What happened</label>
+    <input id="jName" placeholder="First smile" autocomplete="off" autocapitalize="sentences">
+    <div class="chips" id="jChips" style="margin-top:8px"></div>
+    <label class="f">Date</label>
+    <input type="date" id="jDate">
+    <label class="f">Story (optional)</label>
+    <textarea id="jNote" class="plain" placeholder="She smiled at Jordan during the 6 AM feed…"></textarea>
+    <label class="f">Photos</label>
+    <div class="photos" id="jPhotos"></div>
+    <input type="file" id="jPhotoIn" accept="image/*" hidden>
+    <div class="rowb"><button class="btn danger" id="jDelete">Delete</button><button class="btn primary" id="jSave">Save</button></div>
+  </div>
+</div>
+
 <div id="toast" hidden role="status"><div class="tic" hidden></div><div class="tt"><div class="t1"></div><div class="t2" hidden></div></div><button class="alt" hidden><svg class="i"><use href="#i-cam"/></svg>Photo</button><button class="undo">Undo</button></div>
 
 <div class="lightbox" id="lightbox" hidden>
@@ -582,10 +678,10 @@ const DAY=86400000;
 const FEED_GAP=3*3600000; // the progress bar fills over three hours
 
 /* ---------- state ---------- */
-function defaults(){return{days:{},active:null,activeU:0,settings:{name:'Shea Ainsley',dob:'2026-09-05',me:'',role:'',who:'',gap:10},pending:[],fam:null,fbcfg:null,people:{},milk:{bags:{}},targets:{}};}
+function defaults(){return{days:{},active:null,activeU:0,settings:{name:'Shea Ainsley',dob:'2026-09-05',me:'',role:'',who:'',gap:10},pending:[],fam:null,fbcfg:null,people:{},milk:{bags:{}},targets:{},growth:{entries:{}},journal:{entries:{}}};}
 function load(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(j){const d=defaults();const s=Object.assign(d,j,{settings:Object.assign(d.settings,j.settings||{})});
   if(!s.settings.role&&!s.settings.who&&s.settings.me){if(['Mom','Dad'].includes(s.settings.me))s.settings.role=s.settings.me;else s.settings.who=s.settings.me;}
-  if(!s.milk||typeof s.milk!=='object')s.milk={bags:{}};if(!s.milk.bags)s.milk.bags={};if(!s.targets||typeof s.targets!=='object')s.targets={};
+  if(!s.milk||typeof s.milk!=='object')s.milk={bags:{}};if(!s.milk.bags)s.milk.bags={};if(!s.targets||typeof s.targets!=='object')s.targets={};for(const k of ['growth','journal']){if(!s[k]||typeof s[k]!=='object')s[k]={entries:{}};if(!s[k].entries)s[k].entries={};}
   return s;}}catch(e){}return defaults();}
 let S=load();
 function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
@@ -730,6 +826,11 @@ const Remote={mode:'local',ready:false,db:null,fs:null,prefix:'',error:null,
     if(this.mode==='firebase'){const s=await this.fs.doc(this.prefix+path).get();return s.exists?s.data():null;}
     return null;
   },
+  async list(coll){
+    if(this.mode==='claude'){const s=await this.db.collection(coll).get();return s.docs.map(d=>({id:d.id,data:d.data()}));}
+    if(this.mode==='firebase'){const s=await this.fs.collection(this.prefix+coll).get();return s.docs.map(d=>({id:d.id,data:d.data()}));}
+    return [];
+  },
   async remove(path){
     if(this.mode==='claude'){await this.db.doc(path).delete();return;}
     if(this.mode==='firebase'){await Promise.race([this.fs.doc(this.prefix+path).delete(),new Promise(r=>setTimeout(r,6000))]);return;}
@@ -745,10 +846,13 @@ async function flush(){
 }
 let explained=false;
 function explainError(e){if(explained)return;const c=e&&e.code;if(c==='permission-denied'){explained=true;toast('Firebase refused the write. In the Firebase console, open Firestore → Rules and publish the rules from SETUP.md.');}else if(c&&c!=='unavailable'){explained=true;toast('Sync error: '+c);}}
+let lastBackfill=0;
+async function backfill(force){if(!Remote.ready)return;if(!force&&Date.now()-lastBackfill<10*60000)return;lastBackfill=Date.now();
+  try{const docs=await Remote.list('days');let ch=false;for(const d of docs){if(d.data&&d.data.events&&applyLocal(d.id,d.data.events))ch=true;}if(ch)render();}catch(e){console.warn('backfill',e);lastBackfill=0;}}
 const subs={};
 function ensureSubs(){
   if(!Remote.ready)return;
-  const want=new Set(['state/active','state/people','state/milk','state/targets','days/'+today(),'days/'+shiftDay(today(),-1)]);
+  const want=new Set(['state/active','state/people','state/milk','state/targets','state/growth','state/journal','days/'+today(),'days/'+shiftDay(today(),-1)]);
   if(view.day!==today())want.add('days/'+view.day);
   for(const p of Object.keys(subs))if(!want.has(p)){subs[p]();delete subs[p];}
   for(const p of want)if(!subs[p])subs[p]=Remote.subscribe(p,data=>onRemote(p,data));
@@ -758,6 +862,7 @@ function onRemote(path,data){
   if(path==='state/active'){if((data.u||0)>(S.activeU||0)){S.active=data.feed||null;S.activeU=data.u||0;save();render();}return;}
   if(path==='state/people'){const p={};for(const [k,v] of Object.entries(data))if(k!=='u'&&typeof v==='string')p[k]=v;S.people=Object.assign({},S.people,p);save();render();return;}
   if(path==='state/milk'){const ov=S.milk.bags;let ch=false;for(const [id,b] of Object.entries(data.bags||{})){if(!b||typeof b!=='object')continue;const cur=ov[id];if(!cur||(b.u||0)>=(cur.u||0)){ov[id]=b;ch=true;}}if(ch){save();render();}return;}
+  if(path==='state/growth'||path==='state/journal'){const k=path.slice(6);const m=S[k].entries;let ch=false;for(const [id,r] of Object.entries(data.entries||{})){if(!r||typeof r!=='object')continue;const cur=m[id];if(!cur||(r.u||0)>=(cur.u||0)){m[id]=r;ch=true;}}if(ch){save();render();}return;}
   if(path==='state/targets'){if((data.u||0)>((S.targets&&S.targets.u)||0)){S.targets=Object.assign({},data);save();render();}return;}
   if(path.startsWith('days/')){if(applyLocal(path.slice(5),data.events))render();}
 }
@@ -801,7 +906,7 @@ function bottleAdvice(at){const days=ageDays(at);const g=guideFor(days);const li
   lines.push('Typical at '+(days==null?'this age':ageLabel(days))+': '+fmtOz(g.bottleMin)+'–'+fmtOz(g.bottleMax)+' oz per feed');
   const feeds=allEvents().filter(e=>(e.t==='feed'||e.t==='bottle')&&e.at<at);const ses=sessions(feeds,at);const last=ses[ses.length-1];
   if(last){const h=(at-last.start)/3600000;if(h>=0.5&&h<8){const lo=Math.max(g.bottleMin,Math.floor(h*2)/2),hi=Math.max(lo+0.5,Math.ceil(h*1.5*2)/2);lines.push('By time since the last feed ('+(Math.round(h*10)/10)+' h · 1 to 1½ oz per hour): about '+fmtOz(lo)+'–'+fmtOz(hi)+' oz');}}
-  const w=+(S.targets&&S.targets.weight);if(w)lines.push('If she took only bottles: about '+fmtOz(Math.min(32,round2(w*2.5)))+' oz a day (2½ oz per lb, up to 32)');
+  const w=latestWeightLb()||+(S.targets&&S.targets.weight);if(w)lines.push('If she took only bottles: about '+fmtOz(Math.min(32,Math.round(w*2.5*2)/2))+' oz a day (2½ oz per lb, up to 32)');
   return lines;}
 
 /* Milk stock. Every pumping session is a bag (fridge or freezer). A bottle of breast
@@ -926,6 +1031,141 @@ function renderMilkHistory(now){const el=$('#tabMilk');const L=milkLedger(now);c
   wireMilkToggle();const more=$('#ledgerMore');if(more)more.onclick=()=>{view.milkLimit+=60;render();};
   el.querySelectorAll('.row.ledger').forEach(r=>r.onclick=()=>{const x=ref[+r.dataset.n];if(!x)return;if(x.ev){const cur=(S.days[dayKey(x.ev.at)]||{events:{}}).events[x.ev.id];if(cur&&!cur.del)openEditor(cur);return;}if(x.bag&&bagsNow().some(b=>b.id===x.bag))openBag(x.bag);else toast('That bag is used up or discarded');});}
 
+/* ---------- next side ----------
+   From the last breastfeeding session: if both sides got minutes and they differ, start
+   on the side that got less (it is fuller). Otherwise alternate the starting side. */
+function nextSide(ses){for(let i=ses.length-1;i>=0;i--){const s=ses[i];const br=(s.sides||'').replace(/B/g,'');if(!br)continue;
+    if(s.L&&s.R&&s.L!==s.R){const side=s.L<s.R?'L':'R';return{side,why:'Left '+s.L+' min, Right '+s.R+' min last feed'};}
+    const first=br[0];const side=first==='L'?'R':'L';return{side,why:br.length>1?'last feed started on '+SIDE[first]:'last feed was '+SIDE[first]+' only'};}
+  return null;}
+
+/* ---------- shared records (growth, journal): last writer wins per entry ---------- */
+function setRec(k,id,patch){const m=S[k].entries;m[id]=Object.assign({},m[id]||{},patch,{u:Date.now()});save();push('state/'+k,{entries:{[id]:m[id]}});render();}
+function recs(k){return Object.entries(S[k].entries||{}).filter(([,r])=>r&&!r.del).map(([id,r])=>Object.assign({id},r)).sort((a,b)=>a.at-b.at);}
+function dateKeyInput(ms){const d=new Date(ms);return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function ageAt(at){const d=ageDays(at);if(d==null)return'';if(d===0)return'birth day';if(d<14)return d+(d===1?' day old':' days old');if(d<56){const w=Math.floor(d/7),r=d%7;return w+' weeks'+(r?' '+r+(r===1?' day':' days'):'')+' old';}const mo=Math.floor(d/30.4375),w=Math.floor((d-mo*30.4375)/7);return mo+(mo===1?' month':' months')+(w?' '+w+(w===1?' week':' weeks'):'')+' old';}
+
+/* ---------- growth ----------
+   WHO Child Growth Standards, girls, birth to 12 months: [L, M, S] per month for
+   weight (kg), length (cm) and head circumference (cm). Values between months are
+   interpolated. z = ((x/M)^L - 1) / (L*S). */
+const WHO={
+  wt:[[0.3809,3.2322,0.14171],[0.1714,4.1873,0.13724],[0.0962,5.1282,0.13],[0.0402,5.8458,0.12619],[-0.005,6.4237,0.12402],[-0.043,6.8985,0.12274],[-0.0756,7.297,0.12204],[-0.1039,7.6422,0.12178],[-0.1288,7.9487,0.12181],[-0.1507,8.2254,0.12199],[-0.17,8.48,0.12223],[-0.1872,8.7192,0.12247],[-0.2024,8.9481,0.12268]],
+  len:[[1,49.1477,0.0379],[1,53.6872,0.0364],[1,57.0673,0.03568],[1,59.8029,0.0352],[1,62.0899,0.03486],[1,64.0301,0.03463],[1,65.7311,0.03448],[1,67.2873,0.03441],[1,68.7498,0.0344],[1,70.1435,0.03444],[1,71.4818,0.03452],[1,72.771,0.03464],[1,74.015,0.03479]],
+  head:[[1,33.8787,0.03496],[1,36.5463,0.0321],[1,38.2521,0.03168],[1,39.5328,0.0314],[1,40.5817,0.03119],[1,41.459,0.03102],[1,42.1995,0.03087],[1,42.829,0.03075],[1,43.3671,0.03063],[1,43.83,0.03053],[1,44.2319,0.03044],[1,44.5844,0.03035],[1,44.8965,0.03027]]};
+const GKIND={wt:{name:'Weight',field:'lb',toMetric:v=>v*0.45359237,fromMetric:v=>v/0.45359237,unit:'lb'},len:{name:'Length',field:'len',toMetric:v=>v*2.54,fromMetric:v=>v/2.54,unit:'in'},head:{name:'Head',field:'head',toMetric:v=>v*2.54,fromMetric:v=>v/2.54,unit:'in'}};
+function lmsAt(kind,mo){const t=WHO[kind];const m=Math.max(0,Math.min(t.length-1,mo));const i=Math.floor(m),f=m-i;const a=t[i],b=t[Math.min(t.length-1,i+1)];return a.map((v,k)=>v+(b[k]-v)*f);}
+function zOf(kind,mo,x){const [L,M,S2]=lmsAt(kind,mo);return Math.abs(L)<1e-6?Math.log(x/M)/S2:(Math.pow(x/M,L)-1)/(L*S2);}
+function atZ(kind,mo,z){const [L,M,S2]=lmsAt(kind,mo);return Math.abs(L)<1e-6?M*Math.exp(S2*z):M*Math.pow(1+L*S2*z,1/L);}
+function normCdf(z){const t=1/(1+0.2316419*Math.abs(z));const d=0.3989423*Math.exp(-z*z/2);const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p;}
+function pctText(z){const p=normCdf(z)*100;if(p<1)return'below the 1st percentile';if(p>99)return'above the 99th percentile';const n=Math.round(p);const s=(n%100>=11&&n%100<=13)?'th':({1:'st',2:'nd',3:'rd'}[n%10]||'th');return n+s+' percentile';}
+function monthsAt(at){const d=ageDays(at);return d==null?null:d/30.4375;}
+function fmtLb(lb){if(!lb)return'—';let oz=Math.round(lb*16*10)/10;let l=Math.floor(oz/16);oz=Math.round((oz-l*16)*10)/10;if(oz>=16){l++;oz=0;}return l+' lb '+fmtOz(oz)+' oz';}
+function fmtIn(v){return v?(Math.round(v*10)/10)+' in':'—';}
+function latestWeightLb(){const r=recs('growth').filter(x=>x.lb>0);return r.length?r[r.length-1].lb:0;}
+function gval(kind,r){return kind==='wt'?r.lb:kind==='len'?r.len:r.head;}
+function growthChart(kind,rows){const K=GKIND[kind];const pts=rows.filter(r=>gval(kind,r)>0).map(r=>({r,m:monthsAt(r.at),v:gval(kind,r)})).filter(p=>p.m!=null&&p.m<=12.5);
+  const curM=monthsAt(Date.now())||0;const maxM=Math.min(12,Math.max(3,Math.ceil(Math.max(curM,...pts.map(p=>p.m),0)+0.5)));
+  const W=340,H=230,pl=34,pr=34,pt=10,pb=24;const Zs=[[-1.8808,'3rd'],[-1.0364,'15th'],[0,'50th'],[1.0364,'85th'],[1.8808,'97th']];
+  const steps=[];for(let m=0;m<=maxM+1e-9;m+=maxM/48)steps.push(m);
+  const curve=z=>steps.map(m=>[m,K.fromMetric(atZ(kind,m,z))]);const C=Zs.map(([z])=>curve(z));
+  let lo=Math.min(...C[0].map(p=>p[1]),...pts.map(p=>p.v)),hi=Math.max(...C[4].map(p=>p[1]),...pts.map(p=>p.v));const span=hi-lo;lo-=span*.04;hi+=span*.04;
+  const step=kind==='wt'?(hi-lo>12?2:1):(hi-lo>8?2:1);const t0=Math.ceil(lo/step)*step;
+  const x=m=>pl+(m/maxM)*(W-pl-pr),y=v=>pt+(1-(v-lo)/(hi-lo))*(H-pt-pb);
+  const line=arr=>arr.map((p,i)=>(i?'L':'M')+x(p[0]).toFixed(1)+' '+y(p[1]).toFixed(1)).join(' ');
+  const band=(a,b)=>line(a)+' '+b.slice().reverse().map(p=>'L'+x(p[0]).toFixed(1)+' '+y(p[1]).toFixed(1)).join(' ')+' Z';
+  let s='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+K.name+' for age with WHO percentiles">';
+  for(let v=t0;v<=hi;v+=step)s+='<line class="grid" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+'"/><text x="'+(pl-6)+'" y="'+(y(v)+3.5).toFixed(1)+'" text-anchor="end">'+v+'</text>';
+  for(let m=0;m<=maxM;m++){const lab=m===0?'Birth':m+'m';s+='<text x="'+x(m).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+lab+'</text>';}
+  s+='<path class="band1" d="'+band(C[0],C[4])+'"/><path class="band2" d="'+band(C[1],C[3])+'"/>';
+  C.forEach((c,i)=>{s+='<path class="pc'+(i===2?' mid':'')+'" d="'+line(c)+'"/>';const e=c[c.length-1];s+='<text x="'+(x(e[0])+4).toFixed(1)+'" y="'+(y(e[1])+3.5).toFixed(1)+'">'+Zs[i][1]+'</text>';});
+  s+='<text x="'+(pl-6)+'" y="'+(pt-1)+'" text-anchor="end">'+K.unit+'</text>';
+  if(pts.length){s+='<path class="me" d="'+line(pts.map(p=>[p.m,p.v]))+'"/>';pts.forEach((p,i)=>{s+='<circle class="dot" data-i="'+i+'" cx="'+x(p.m).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+'" r="4.5"/>';});
+    pts.forEach((p,i)=>{const z=zOf(kind,p.m,K.toMetric(p.v));const cap=fmtDate(dayKey(p.r.at))+' · '+(kind==='wt'?fmtLb(p.v):fmtIn(p.v))+' · '+pctText(z);s+='<circle class="hit" data-i="'+i+'" data-cap="'+esc(cap)+'" cx="'+x(p.m).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+'" r="15"/>';});}
+  return s+'</svg>';}
+function renderGrowth(now){const el=$('#tabGrowth');const rows=recs('growth');const kind=view.gkind||'wt';const K=GKIND[kind];
+  const w=rows.filter(r=>r.lb>0),L=rows.filter(r=>r.len>0),Hd=rows.filter(r=>r.head>0);const lw=w[w.length-1];
+  let top='<section class="card"><div class="eyebrow"><svg class="i"><use href="#i-target"/></svg>Latest'+(lw?' · '+fmtDate(dayKey(lw.at))+' · '+ageAt(lw.at):'')+'</div>';
+  if(lw){const z=zOf('wt',monthsAt(lw.at),GKIND.wt.toMetric(lw.lb));top+='<div class="gbig"><b class="num">'+fmtLb(lw.lb)+'</b><span>'+pctText(z)+'</span></div>';
+    const bits=[];const prev=w[w.length-2];if(prev){const days=(lw.at-prev.at)/DAY;if(days>=1){const perDay=(lw.lb-prev.lb)*16/days;bits.push((perDay>=0?'+':'−')+fmtOz(Math.abs(Math.round(perDay*10)/10))+' oz a day since '+fmtDate(dayKey(prev.at)).replace(/^\w+, /,''));}}
+    const birth=w[0];if(birth&&ageDays(birth.at)!=null&&ageDays(birth.at)<=2&&birth!==lw){const diff=(lw.lb-birth.lb)*16;bits.push(diff>=0?'back above birth weight by '+fmtOz(Math.round(diff*10)/10)+' oz':fmtOz(Math.round(-diff*10)/10)+' oz under birth weight');}
+    if(bits.length)top+='<p class="hint" style="margin-top:6px">'+bits.join(' · ')+'</p>';
+    const lastL=L[L.length-1],lastH=Hd[Hd.length-1];
+    if(lastL||lastH)top+='<div class="gsub">'+(lastL?'<div><b>'+fmtIn(lastL.len)+'</b><span>length · '+pctText(zOf('len',monthsAt(lastL.at),GKIND.len.toMetric(lastL.len))).replace(' percentile',' pct')+'</span></div>':'<div><b>—</b><span>length</span></div>')+(lastH?'<div><b>'+fmtIn(lastH.head)+'</b><span>head · '+pctText(zOf('head',monthsAt(lastH.at),GKIND.head.toMetric(lastH.head))).replace(' percentile',' pct')+'</span></div>':'<div><b>—</b><span>head</span></div>')+'</div>';}
+  else top+='<p class="lead" style="margin:10px 0 0;font-size:16px;font-weight:700">No measurements yet</p><p class="hint">Start with her birth weight and length from the hospital papers, then add each checkup.</p>';
+  top+='<div class="rowb" style="margin-top:14px"><button class="btn sm primary" id="grAdd">'+ICON.plus+'Add measurement</button></div></section>';
+  const chart='<section class="card"><div class="seg" id="gSeg"><button data-v="wt" aria-pressed="'+(kind==='wt')+'">Weight</button><button data-v="len" aria-pressed="'+(kind==='len')+'">Length</button><button data-v="head" aria-pressed="'+(kind==='head')+'">Head</button></div>'+
+    '<div class="chartbox" id="gBox">'+growthChart(kind,rows)+'<div class="cap" id="gCap">'+(rows.some(r=>gval(kind,r)>0)?'Tap a dot for the date and percentile.':'Her '+K.name.toLowerCase()+' measurements will plot here against the WHO curves.')+'</div></div>'+
+    '<p class="hint">Shaded bands are the 3rd–97th and 15th–85th percentiles from the WHO Child Growth Standards for girls, birth to 12 months, the charts US pediatricians use before age 2. Tracking along a curve matters more than which curve. Your pediatrician\'s measurements and chart are the reference.</p></section>';
+  const list=rows.length?'<section class="tl"><div class="tl-head"><h2>Measurements</h2></div>'+rows.slice().reverse().map(r=>{const parts=[];if(r.lb)parts.push(fmtLb(r.lb)+' ('+pctText(zOf('wt',monthsAt(r.at),GKIND.wt.toMetric(r.lb))).replace(' percentile','')+')');if(r.len)parts.push(fmtIn(r.len)+' long');if(r.head)parts.push(fmtIn(r.head)+' head');
+      return '<button class="row grow-row" data-id="'+r.id+'"><div class="t num" style="font-size:12.5px">'+fmtDate(dayKey(r.at)).replace(/^\w+, /,'')+'</div><div class="ic grow"><svg class="i"><use href="#i-target"/></svg></div><div><div class="title">'+esc(parts[0]||'Measurement')+'</div><div class="meta">'+esc(parts.slice(1).concat(ageAt(r.at),r.note||'',who(r.by)||'').filter(Boolean).join(' · '))+'</div></div></button>';}).join('')+'</section>':'';
+  el.innerHTML=top+chart+list;
+  $('#grAdd').onclick=()=>openGrowth(null);
+  document.querySelectorAll('#gSeg button').forEach(b=>b.onclick=()=>{view.gkind=b.dataset.v;render();});
+  el.querySelectorAll('.grow-row').forEach(r=>r.onclick=()=>openGrowth(r.dataset.id));
+  el.querySelectorAll('#gBox .hit').forEach(c=>c.onclick=()=>{$('#gCap').innerHTML='<b>'+c.dataset.cap+'</b>';el.querySelectorAll('#gBox .dot').forEach(d=>d.classList.toggle('sel',d.dataset.i===c.dataset.i));});}
+const gr={id:null};
+function openGrowth(id){gr.id=id;const r=id?S.growth.entries[id]:null;$('#grTitle').textContent=r?'Edit measurement':'Add measurement';
+  $('#grDate').value=dateKeyInput(r?r.at:Date.now());const lb=r&&r.lb?r.lb:0;$('#grLb').value=lb?Math.floor(lb):'';$('#grOz').value=lb?fmtOz(Math.round((lb-Math.floor(lb))*16*10)/10):'';
+  $('#grLen').value=r&&r.len?r.len:'';$('#grHead').value=r&&r.head?r.head:'';$('#grNote').value=r&&r.note?r.note:'';$('#grDelete').hidden=!r;$('#grSheet').hidden=false;}
+function saveGrowth(){const d=$('#grDate').value;if(!d){toast('Pick the date it was measured');return;}const at=dayStart(d)+12*3600000;
+  const lbI=parseFloat($('#grLb').value)||0,oz=parseFloat($('#grOz').value)||0;const lb=lbI||oz?Math.round((lbI+oz/16)*10000)/10000:0;const len=parseFloat($('#grLen').value)||0,head=parseFloat($('#grHead').value)||0;
+  if(!lb&&!len&&!head){toast('Enter a weight, length or head size');return;}if(oz>=16){toast('Ounces should be under 16');return;}
+  const id=gr.id||uid();const prev=gr.id?S.growth.entries[gr.id]:null;setRec('growth',id,{at,lb,len:round2(len),head:round2(head),note:$('#grNote').value.trim(),by:(prev&&prev.by)||me()});
+  $('#grSheet').hidden=true;toast(gr.id?'Measurement updated':'Measurement saved',null,null,{kind:'milk',icon:'<svg class="i"><use href="#i-target"/></svg>',sub:lb?fmtLb(lb)+' · '+pctText(zOf('wt',monthsAt(at),GKIND.wt.toMetric(lb))):fmtDate(d)});}
+$('#grSave').onclick=saveGrowth;$('#grDelete').onclick=()=>{if(gr.id&&confirm('Delete this measurement?')){setRec('growth',gr.id,{del:true});$('#grSheet').hidden=true;toast('Measurement deleted');}};
+
+/* ---------- trends ---------- */
+function dailyStats(n,now){const t=today();const all=allEvents().filter(e=>e.at<=now);const ses=sessions(all.filter(e=>e.t==='feed'||e.t==='bottle'),now);const out=[];
+  const dob=S.settings.dob;for(let i=n-1;i>=0;i--){const k=shiftDay(t,-i);if(dob&&k<dob)continue;const de=all.filter(e=>dayKey(e.at)===k);const g=guideFor(ageDays(dayStart(k)));
+    out.push({k,partial:k===t,feeds:ses.filter(s=>dayKey(s.start)===k).length,wet:de.filter(e=>e.t==='diaper'&&e.pee).length,dirty:de.filter(e=>e.t==='diaper'&&e.poop).length,
+      nurse:de.filter(e=>e.t==='feed').reduce((s,e)=>s+(e.dur||0),0),bottle:round2(de.filter(e=>e.t==='bottle').reduce((s,e)=>s+(+e.oz||0),0)),pump:round2(de.filter(e=>e.t==='pump').reduce((s,e)=>s+(+e.oz||0),0)),
+      tFeeds:g.feedsMin,tWet:g.wet,tDirty:g.dirty});}
+  return out;}
+function barChart(days,key,cls,tkey,unit){const W=320,H=92,pl=2,pr=2,pt=14,pb=16;const n=days.length;const vals=days.map(d=>d[key]);const tg=tkey?days.map(d=>d[tkey]):null;
+  const max=Math.max(1,...vals,...(tg||[0]))*1.12;const bw=(W-pl-pr)/n;const y=v=>pt+(1-v/max)*(H-pt-pb);const base=H-pb;
+  let s='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img">';s+='<line class="base" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+base+'" y2="'+base+'"/>';
+  days.forEach((d,i)=>{const v=d[key];const x0=pl+i*bw+1,w=Math.max(2,bw-2);if(v>0){const top=y(v),hgt=base-top,r=Math.min(4,w/2,hgt);
+      s+='<path class="'+cls+(d.partial?' partial':'')+'" data-i="'+i+'" d="M'+x0.toFixed(1)+' '+base+' V'+(top+r).toFixed(1)+' Q'+x0.toFixed(1)+' '+top.toFixed(1)+' '+(x0+r).toFixed(1)+' '+top.toFixed(1)+' H'+(x0+w-r).toFixed(1)+' Q'+(x0+w).toFixed(1)+' '+top.toFixed(1)+' '+(x0+w).toFixed(1)+' '+(top+r).toFixed(1)+' V'+base+' Z"/>';}});
+  if(tg){const tv=tg[tg.length-1];const ty=y(tv);s+='<line class="tline" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+ty.toFixed(1)+'" y2="'+ty.toFixed(1)+'"/><text class="tlab" x="'+(W-pr)+'" y="'+(ty-3).toFixed(1)+'" text-anchor="end">target '+tv+'+</text>';}
+  const lab=k=>k===today()?'Today':fmtDate(k).replace(/^\w+, /,'');s+='<text x="'+pl+'" y="'+(H-3)+'">'+lab(days[0].k)+'</text><text x="'+(W-pr)+'" y="'+(H-3)+'" text-anchor="end">'+lab(days[n-1].k)+'</text>';
+  days.forEach((d,i)=>{const cap=(d.partial?'Today so far':fmtDate(d.k))+' · '+fmtOz(d[key])+' '+unit+(tkey?' (target '+d[tkey]+'+)':'');s+='<rect class="hit" data-i="'+i+'" data-cap="'+esc(cap)+'" x="'+(pl+i*bw).toFixed(1)+'" y="0" width="'+bw.toFixed(1)+'" height="'+H+'"/>';});
+  return s+'</svg>';}
+function trendsHTML(now){const n=view.trend||14;const days=dailyStats(n,now);const firstEv=allEvents()[0];const full=days.filter(d=>!d.partial&&(!firstEv||d.k>=dayKey(firstEv.at)));const avg=k=>full.length?Math.round(full.reduce((s,d)=>s+d[k],0)/full.length*10)/10:0;
+  const charts=[['feeds','Feeds','b-feed','tFeeds','feeds'],['wet','Wet diapers','b-pee','tWet','wet'],['dirty','Dirty diapers','b-poop','tDirty','dirty'],['nurse','Nursing minutes','b-feed',null,'min'],['bottle','Bottle ounces','b-milk',null,'oz'],['pump','Pumped ounces','b-milk',null,'oz']]
+    .filter(([k],i)=>i<3||days.some(d=>d[k]>0));
+  return '<section class="card tg" id="trends"><div class="eyebrow">Trends</div><div class="seg" id="trSeg" style="margin-top:10px">'+[7,14,30].map(v=>'<button data-v="'+v+'" aria-pressed="'+(n===v)+'">'+v+' days</button>').join('')+'</div>'+
+    charts.map(([k,name,cls,tk,unit])=>'<div class="chartbox"><div class="ch-h"><b>'+name+'</b><span>avg '+fmtOz(avg(k))+' '+(unit==='feeds'||unit==='wet'||unit==='dirty'?'a day':unit+' a day')+'</span></div>'+barChart(days,k,cls,tk,unit)+'<div class="cap">'+(days[days.length-1][k]||days[days.length-1][k]===0?'Today so far: <b>'+fmtOz(days[days.length-1][k])+' '+unit+'</b>':'')+'</div></div>').join('')+
+    '<p class="hint">Faded bar is today, still in progress. The dashed line is the minimum for her age. Tap a bar for that day.</p></section>';}
+function wireTrends(){document.querySelectorAll('#trSeg button').forEach(b=>b.onclick=()=>{view.trend=+b.dataset.v;render();});
+  document.querySelectorAll('#trends .chartbox').forEach(box=>box.querySelectorAll('.hit').forEach(r=>r.onclick=()=>{box.querySelector('.cap').innerHTML='<b>'+r.dataset.cap+'</b>';box.querySelectorAll('path[data-i]').forEach(p=>p.classList.toggle('barsel',p.dataset.i===r.dataset.i));}));}
+
+/* ---------- journal ---------- */
+const MILESTONES=['First smile','First laugh','First bath','Umbilical cord fell off','Held head up','First tummy time','Rolled over','First outing','Slept 5+ hours','Met grandparents'];
+const jd={id:null,photos:[],added:[]};
+function renderJournal(now){const el=$('#tabJournal');const rows=recs('journal').slice().reverse();
+  const start='<section class="card jstart"><div class="eyebrow">Milestones and moments</div><div class="chips" id="jQuick" style="margin:0 -20px;padding:0 20px">'+MILESTONES.filter(m=>!rows.some(r=>r.title===m)).map(m=>'<button data-m="'+esc(m)+'">'+esc(m)+'</button>').join('')+'</div><button class="btn sm primary" id="jAdd">'+ICON.plus+'Add a moment</button></section>';
+  const cards=rows.map(r=>{const ph=r.photos||[];const g=ph.length===1?' one':ph.length===2||ph.length===4?' two':'';
+    return '<button class="jcard" data-id="'+r.id+'"><div class="jd">'+fmtDate(dayKey(r.at))+' · '+esc(ageAt(r.at))+'</div><h3>'+esc(r.title)+'</h3>'+(r.note?'<p>'+esc(r.note)+'</p>':'')+(ph.length?'<div class="jgrid'+g+'">'+ph.map(id=>'<div class="ph loading" data-ph="'+id+'"></div>').join('')+'</div>':'')+'</button>';}).join('');
+  el.innerHTML=start+(cards||'<section class="tl"><div class="none">Nothing saved yet. Tap a milestone above when it happens, add a photo, and it lives here for both of you.</div></section>');
+  $('#jAdd').onclick=()=>openJournal(null);
+  el.querySelectorAll('#jQuick button').forEach(b=>b.onclick=()=>openJournal(null,b.dataset.m));
+  el.querySelectorAll('.jcard').forEach(c=>c.onclick=e=>{const p=e.target.closest('[data-ph]');const r=S.journal.entries[c.dataset.id];if(p&&r){e.stopPropagation();openLightbox(p.dataset.ph,{caption:r.title+' · '+fmtDate(dayKey(r.at)),del:id=>{setRec('journal',c.dataset.id,{photos:(r.photos||[]).filter(x=>x!==id)});discardPhoto(id);toast('Photo deleted');}});return;}openJournal(c.dataset.id);});
+  el.querySelectorAll('[data-ph]').forEach(d=>loadPhoto(d.dataset.ph).then(p=>{d.classList.remove('loading');if(p)d.innerHTML='<img src="'+p.data+'" alt="">';}));}
+function openJournal(id,title){jd.id=id;jd.added=[];const r=id?S.journal.entries[id]:null;jd.photos=r?(r.photos||[]).slice():[];jd.tempId=id||uid();
+  $('#jTitle').textContent=r?'Edit moment':'New moment';$('#jName').value=r?r.title:(title||'');$('#jDate').value=dateKeyInput(r?r.at:Date.now());$('#jNote').value=r?(r.note||''):'';$('#jDelete').hidden=!r;
+  $('#jChips').innerHTML=MILESTONES.map(m=>'<button data-m="'+esc(m)+'">'+esc(m)+'</button>').join('');$('#jChips').hidden=!!r;renderJPhotos();$('#jSheet').hidden=false;}
+function renderJPhotos(){const el=$('#jPhotos');el.innerHTML=jd.photos.map(id=>'<button type="button" class="ph loading" data-id="'+id+'"></button>').join('')+'<button type="button" class="add" id="jPhotoAdd"><svg class="i"><use href="#i-cam"/></svg>Add photo</button>';
+  jd.photos.forEach(id=>loadPhoto(id).then(p=>{const b=el.querySelector('[data-id="'+id+'"]');if(!b)return;b.classList.remove('loading');if(p){b.innerHTML='<img src="'+p.data+'" alt="">';b.onclick=()=>openLightbox(id,{caption:($('#jName').value||'Moment'),del:x=>{jd.photos=jd.photos.filter(y=>y!==x);discardPhoto(x);if(jd.id)setRec('journal',jd.id,{photos:jd.photos.slice()});renderJPhotos();}});}}));
+  $('#jPhotoAdd').onclick=()=>$('#jPhotoIn').click();}
+$('#jChips').addEventListener('click',e=>{const b=e.target.closest('button');if(b)$('#jName').value=b.dataset.m;});
+$('#jPhotoIn').addEventListener('change',async ev=>{const f=ev.target.files&&ev.target.files[0];ev.target.value='';if(!f)return;const d=$('#jDate').value;const at=d?dayStart(d)+12*3600000:Date.now();
+  try{const id=await storePhoto(f,{id:jd.tempId,at});jd.photos.push(id);jd.added.push(id);if(jd.id)setRec('journal',jd.id,{photos:jd.photos.slice()});renderJPhotos();toast('Photo added');}catch(err){toast(err.message||'Could not add that photo');}});
+function saveJournal(){const title=$('#jName').value.trim();if(!title){toast('Give the moment a name');return;}const d=$('#jDate').value;const at=d?dayStart(d)+12*3600000:Date.now();
+  const id=jd.id||jd.tempId;const prev=jd.id?S.journal.entries[jd.id]:null;setRec('journal',id,{at,title,note:$('#jNote').value.trim(),photos:jd.photos.slice(),by:(prev&&prev.by)||me()});jd.added=[];$('#jSheet').hidden=true;toast(jd.id?'Saved':'Moment saved',null,null,{kind:'milk',icon:ICON.plus,sub:title});}
+function cancelJournal(){if(!jd.id)for(const x of jd.added)discardPhoto(x);jd.added=[];}
+$('#jSave').onclick=saveJournal;$('#jDelete').onclick=()=>{if(jd.id&&confirm('Delete this moment and its photos?')){const r=S.journal.entries[jd.id];for(const x of (r&&r.photos)||[])discardPhoto(x);setRec('journal',jd.id,{del:true,photos:[]});jd.added=[];$('#jSheet').hidden=true;toast('Moment deleted');}};
+
 /* targets for one day: count vs. minimum, with pace awareness for today */
 function targetsFor(dk,now){const isT=dk===today();const days=ageDays(dayStart(dk));const g=guideFor(days);const de=dayEvents(dk).filter(e=>e.at<=now);
   const nSes=sessions(allEvents().filter(e=>(e.t==='feed'||e.t==='bottle')&&e.at<=now),now).filter(s=>dayKey(s.start)===dk).length;
@@ -957,7 +1197,7 @@ function renderMilk(now){if(view.milk==='history'){renderMilkHistory(now);return
   const mb=$('#moveBtn');if(mb)mb.onclick=openMove;wireMilkToggle();
   el.querySelectorAll('.bagrow').forEach(r=>r.onclick=()=>openBag(r.dataset.bag));$('#addBag').onclick=()=>openBag(null);}
 
-function renderTargets(now){const el=$('#tabTargets');const dk=view.day;const isT=dk===today();const T=targetsFor(dk,now);const g=T.g;const days=T.days;
+function renderTargets(now){setTimeout(wireTrends,0);const el=$('#tabTargets');const dk=view.day;const isT=dk===today();const T=targetsFor(dk,now);const g=T.g;const days=T.days;
   const head=days==null?'Set her birthday in Settings for age-based targets':(isT?'Today · '+ageLabel(days):fmtDate(dk)+' · '+ageLabel(days));
   const rows=T.rows.map(r=>'<div class="tr"><div class="lab"><i class="k '+r.cls+'"></i>'+r.label+'</div><div class="mid"><div class="nums num"><b>'+r.count+'</b> of '+r.min+(r.max?'–'+r.max:'+')+'</div><div class="bar"><span class="'+r.st+'" style="width:'+r.pct+'%"></span></div></div><div class="st '+r.st+'">'+r.txt+'</div></div>').join('');
   const y=(isT&&dayEvents(shiftDay(dk,-1)).length)?targetsFor(shiftDay(dk,-1),now):null;
@@ -965,6 +1205,7 @@ function renderTargets(now){const el=$('#tabTargets');const dk=view.day;const is
   const adv=bottleAdvice(isT?now:dayStart(dk)+12*3600000);
   el.innerHTML='<section class="card tg"><div class="eyebrow"><svg class="i"><use href="#i-target"/></svg>'+esc(head)+'</div>'+rows+yest+(g.note?'<p class="hint">'+g.note+'</p>':'')+'</section>'+
     '<section class="card tg"><div class="eyebrow">'+ICON.bottle+'How much per bottle</div>'+adv.map((l,i)=>'<p class="'+(i?'hint':'lead')+'">'+esc(l)+'</p>').join('')+'<p class="hint">Follow her cues over the number: keep the bottle paced, pause to burp, and stop when she turns away. Offer a little more rather than a lot at once.</p></section>'+
+    trendsHTML(now)+
     '<section class="card tg"><div class="eyebrow">What to expect by age</div><div class="tablewrap"><table class="gt"><thead><tr><th>Age</th><th>Wet</th><th>Dirty</th><th>Feeds</th><th>Bottle</th></tr></thead><tbody>'+
     GUIDE.map((r,i)=>{const from=i?GUIDE[i-1].to+1:0;const cur=days!=null&&days>=from&&days<=r.to;return '<tr'+(cur?' class="cur"':'')+'><td>'+r.lab+'</td><td>'+r.wet+'+</td><td>'+r.dirty+'+</td><td>'+r.feeds[0]+'–'+r.feeds[1]+'</td><td>'+fmtOz(r.bottle[0])+'–'+fmtOz(r.bottle[1])+' oz</td></tr>';}).join('')+
     '</tbody></table></div><p class="hint">General guidance for a breastfed baby from the American Academy of Pediatrics, the CDC and La Leche League: minimums per 24 hours, and a typical bottle size per feed. Your pediatrician\'s instructions come first. Override any number in Settings → Targets'+(g.custom?' (custom targets are in use now)':'')+'.</p></section>';}
@@ -977,14 +1218,17 @@ function render(){
   $('#babyName').textContent=S.settings.name||'Baby';document.title=first+"'s Log";
   $('#age').textContent=ageText();
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===view.tab)));
-  $('#tabLog').hidden=view.tab!=='log';$('#tabMilk').hidden=view.tab!=='milk';$('#tabTargets').hidden=view.tab!=='targets';
-  $('#daynav').hidden=view.tab==='milk';
+  $('#tabLog').hidden=view.tab!=='log';$('#tabMilk').hidden=view.tab!=='milk';$('#tabTargets').hidden=view.tab!=='targets';$('#tabGrowth').hidden=view.tab!=='growth';$('#tabJournal').hidden=view.tab!=='journal';
+  $('#daynav').hidden=view.tab==='milk'||view.tab==='growth'||view.tab==='journal';
   $('#dayLabel').innerHTML=(isToday?'Today':view.day===shiftDay(t,-1)?'Yesterday':view.day===shiftDay(t,1)?'Tomorrow':fmtDate(view.day))+'<small>'+(isToday?fmtDate(t):'tap for today')+'</small>';
   $('#nextDay').disabled=view.day>=maxDay();
   $('#pad').hidden=!isToday;document.documentElement.style.setProperty('--toast-b',isToday?'172px':'20px');
   $('#app').style.paddingBottom=isToday?'':'32px';
   if(view.tab==='milk'){renderMilk(now);ensureSubs();return;}
   if(view.tab==='targets'){renderTargets(now);ensureSubs();return;}
+  if(view.tab==='growth'){renderGrowth(now);ensureSubs();return;}
+  if(view.tab==='journal'){renderJournal(now);ensureSubs();return;}
+  document.querySelectorAll('.dock .feed').forEach(b=>b.classList.remove('next'));
   $('#logTitle').textContent=isToday?'Today':fmtDate(view.day);
 
   const everything=allEvents();const all=everything.filter(e=>e.at<=now);const rev=all.slice().reverse();
@@ -992,6 +1236,7 @@ function render(){
   const lastWet=rev.find(e=>e.t==='diaper'&&e.pee),lastDirty=rev.find(e=>e.t==='diaper'&&e.poop);
   const a=S.active;
   const allFeeds=all.filter(e=>e.t==='feed'||e.t==='bottle');const ses=sessions(allFeeds,now);const lastSes=ses[ses.length-1]||null;
+  const ns=S.active?null:nextSide(ses);document.querySelectorAll('.dock .feed').forEach(b=>b.classList.toggle('next',!!ns&&b.dataset.act==='feed'+ns.side));
   const sesIdx=new Map();for(const s of ses)s.feeds.forEach((e,i)=>sesIdx.set(e.id,{s,i}));
   activePrior=(a&&lastSes&&lastSes.active)?lastSes.feeds.filter(e=>e.id!==a.id).flatMap(e=>segsOf(e)||[]).map(g=>SIDE[g.s]+' '+mins(g.sec)+'m').join(' → '):'';
   const deAll=dayEvents(view.day);const de=deAll.filter(e=>e.at<=now);
@@ -1027,6 +1272,7 @@ function render(){
     hero.innerHTML='<div class="eyebrow"><i class="k feed"></i>Since last feed</div><div class="empty">Nothing logged yet. Tap <b>L</b> or <b>R</b> when '+esc(first)+' latches, <b>Bottle</b> for a bottle, or <b>Earlier</b> to backfill.</div>';
   }
 
+  if(isToday&&ns&&!hero.hidden)hero.insertAdjacentHTML('beforeend','<div class="nside">Next feed: start on <b>'+SIDE[ns.side]+'</b> · '+esc(ns.why)+'</div>');
   if(isToday&&nextPlan&&!hero.hidden){const np=nextPlan;hero.insertAdjacentHTML('beforeend','<div class="nextp"><svg class="i"><use href="#i-clock"/></svg>Next planned: <b>'+(np.t==='bottle'?'Bottle · '+fmtOz(np.oz)+' oz':'Feed · '+sideName(np.side))+'</b> at '+fmtTime(np.at)+(dayKey(np.at)!==t?' '+fmtDate(dayKey(np.at)):'')+' · in '+until(np.at)+'</div>');}
   // since tiles
   const since=$('#since');
@@ -1112,11 +1358,11 @@ $('#photoIn').addEventListener('change',async ev=>{const f=ev.target.files&&ev.t
 /* For an entry that already exists, the photo list is saved right away so a photo
    added from the quick "Add photo" toast survives even if Save is never tapped. */
 function persistPhotos(){if(ed.isNew)return;const cur=(S.days[dayKey(ed.ev.at)]||{events:{}}).events[ed.ev.id];if(cur&&!cur.del)putEvent(Object.assign({},cur,{photos:(ed.ev.photos||[]).slice()}));}
-let lbId=null;
-async function openLightbox(id){const p=await loadPhoto(id);if(!p){toast('That photo has not synced yet');return;}lbId=id;$('#lbImg').src=p.data;const e=ed.ev;$('#lbCap').textContent=(e.t==='diaper'?(e.pee&&e.poop?'Wet + dirty':e.pee?'Wet diaper':'Dirty diaper'):e.t==='spit'?'Spit-up':'Feed')+' · '+fmtTime(e.at)+' '+fmtDate(dayKey(e.at));$('#lightbox').hidden=false;}
+let lbId=null,lbCtx=null;
+async function openLightbox(id,ctx){const p=await loadPhoto(id);if(!p){toast('That photo has not synced yet');return;}lbId=id;lbCtx=ctx||null;$('#lbImg').src=p.data;if(ctx){$('#lbCap').textContent=ctx.caption;$('#lightbox').hidden=false;return;}const e=ed.ev;$('#lbCap').textContent=(e.t==='diaper'?(e.pee&&e.poop?'Wet + dirty':e.pee?'Wet diaper':'Dirty diaper'):e.t==='spit'?'Spit-up':'Feed')+' · '+fmtTime(e.at)+' '+fmtDate(dayKey(e.at));$('#lightbox').hidden=false;}
 function closeLightbox(){$('#lightbox').hidden=true;$('#lbImg').removeAttribute('src');lbId=null;}
 $('#lbClose').onclick=closeLightbox;
-$('#lbDel').onclick=()=>{if(!lbId||!confirm('Delete this photo?'))return;const id=lbId;closeLightbox();ed.ev.photos=(ed.ev.photos||[]).filter(x=>x!==id);ed.added=ed.added.filter(x=>x!==id);discardPhoto(id);persistPhotos();renderPhotoStrip();toast('Photo deleted');};
+$('#lbDel').onclick=()=>{if(!lbId||!confirm('Delete this photo?'))return;const id=lbId;const ctx=lbCtx;closeLightbox();if(ctx&&ctx.del){ctx.del(id);return;}ed.ev.photos=(ed.ev.photos||[]).filter(x=>x!==id);ed.added=ed.added.filter(x=>x!==id);discardPhoto(id);persistPhotos();renderPhotoStrip();toast('Photo deleted');};
 function cancelEditor(){if(ed.ev&&ed.isNew&&ed.added&&ed.added.length){for(const id of ed.added)discardPhoto(id);}ed.added=[];}
 function updateAtHint(){updateBottleHint();const ms=new Date($('#edAt').value).getTime();const h=$('#edAtHint');if(isNaN(ms)){h.textContent='';return;}const diff=Date.now()-ms;h.textContent=diff<60000&&diff>-60000?'Right now':diff>0?ago(ms)+' ago · '+fmtTime(ms)+(dayKey(ms)!==today()?' '+fmtDate(dayKey(ms)):''):'In '+until(ms)+' · '+fmtTime(ms)+(dayKey(ms)!==today()?' '+fmtDate(dayKey(ms)):'')+' · saving will ask you to confirm';}
 $('#edChips').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('#edAt').value=toLocalInput(Date.now()-parseInt(b.dataset.m,10)*60000);updateAtHint();});
@@ -1209,7 +1455,7 @@ function renderSyncSect(){
   on('connectBtn',()=>{try{const cfg=parseCfg($('#fbcfg').value);const fam=($('#famIn').value||'').trim();if(fam&&fam.length<16){toast('That family code looks too short');return;}S.fbcfg=cfg;S.fam=fam||S.fam||genCode();S.appliedHash=inviteHash();save();location.hash=inviteHash();location.reload();}catch(e){toast(e.message);}});
   on('shareInvite',async()=>{const link=inviteLink();if(navigator.share){try{await navigator.share({title:(S.settings.name||'Baby')+"'s Log",text:'Join '+(S.settings.name||'the baby').split(' ')[0]+"'s feeding log: ",url:link});return;}catch(e){if(e.name==='AbortError')return;}}copyText(link);});
   on('copyInvite',()=>copyText(inviteLink()));
-  on('joinBtn',()=>{const c=($('#joinCode').value||'').trim();if(c.length<16){toast('That code looks too short');return;}if(c===S.fam){toast('This phone already uses that code');return;}S.fam=c;S.days={};S.pending=[];S.active=null;S.activeU=0;S.milk={bags:{}};S.targets={};S.appliedHash=inviteHash();save();location.hash=inviteHash();location.reload();});
+  on('joinBtn',()=>{const c=($('#joinCode').value||'').trim();if(c.length<16){toast('That code looks too short');return;}if(c===S.fam){toast('This phone already uses that code');return;}S.fam=c;S.days={};S.pending=[];S.active=null;S.activeU=0;S.milk={bags:{}};S.targets={};S.growth={entries:{}};S.journal={entries:{}};S.appliedHash=inviteHash();save();location.hash=inviteHash();location.reload();});
   on('disconnectBtn',()=>{if(confirm('Stop syncing this phone? Entries stay in the shared log; this phone keeps its own copy.')){S.fbcfg=null;S.fam=null;save();history.replaceState(null,'',location.pathname);location.reload();}});
 }
 function parseCfg(txt){const cfg={};const re=/["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g;let m;while((m=re.exec(txt)))cfg[m[1]]=m[2];if(!cfg.apiKey||!cfg.projectId)throw new Error('Could not find apiKey and projectId in what you pasted');return cfg;}
@@ -1228,7 +1474,7 @@ function handleJoinHash(){
   if(S.appliedHash===h)return false;
   try{const p=new URLSearchParams(h.slice(1));const fam=p.get('join'),cfg=p.get('cfg');
     if(fam&&cfg&&fam.length>=16){const parsed=JSON.parse(unb64u(cfg));if(!parsed.apiKey||!parsed.projectId)throw new Error('bad cfg');
-      if(S.fam&&S.fam!==fam){S.days={};S.pending=[];S.active=null;S.activeU=0;S.milk={bags:{}};S.targets={};}
+      if(S.fam&&S.fam!==fam){S.days={};S.pending=[];S.active=null;S.activeU=0;S.milk={bags:{}};S.targets={};S.growth={entries:{}};S.journal={entries:{}};}
       S.fam=fam;S.fbcfg=parsed;S.appliedHash=h;save();return true;}}
   catch(e){console.warn(e);toast('That invite link is damaged. Ask for a fresh one.');}
   history.replaceState(null,'',location.pathname);return false;
@@ -1263,8 +1509,8 @@ async function exportCsv(){
 }
 
 /* ---------- wiring ---------- */
-function closeSheets(){$('#editor').hidden=true;$('#settings').hidden=true;$('#bagSheet').hidden=true;$('#mvSheet').hidden=true;}
-function dismiss(){if(!$('#editor').hidden)cancelEditor();closeSheets();}
+function closeSheets(){$('#editor').hidden=true;$('#settings').hidden=true;$('#bagSheet').hidden=true;$('#mvSheet').hidden=true;$('#grSheet').hidden=true;$('#jSheet').hidden=true;}
+function dismiss(){if(!$('#editor').hidden)cancelEditor();if(!$('#jSheet').hidden)cancelJournal();closeSheets();}
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=dismiss);
 const PRESET={feedL:{t:'feed',side:'L'},feedR:{t:'feed',side:'R'},bottle:{t:'bottle'},pump:{t:'pump'},pee:{t:'diaper',pee:true,poop:false},poop:{t:'diaper',pee:false,poop:true},both:{t:'diaper',pee:true,poop:true},spit:{t:'spit'}};
 let held=false,holdTimer=null,holdBtn=null;
@@ -1293,7 +1539,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#lightbox').
 setInterval(()=>{const a=S.active;if(!a)return;const now=Date.now();const el=$('#activeElapsed');if(el)el.textContent=fmtSec(nursingSec(a,now));const s=$('#activeSides');if(s)s.textContent=liveSides(a);const p=$('#pauseElapsed');if(p&&a.paused)p.textContent=fmtSec((now-(a.pauseStart||now))/1000);},1000);
 let lastDay=today();
 setInterval(()=>{const t=today();if(t!==lastDay){lastDay=t;if(view.follow)view.day=t;}render();},30000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();flush();flushPhotos();}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();flush();flushPhotos();backfill();}});
 window.addEventListener('online',()=>{flush();flushPhotos();});
 
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{});});}
@@ -1302,7 +1548,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventLi
 const joined=handleJoinHash();
 view.day=today();
 render();
-Remote.init().then(()=>{setSync(S.pending.length?'pending':'ok');ensureSubs();flush();flushPhotos();
+Remote.init().then(()=>{setSync(S.pending.length?'pending':'ok');ensureSubs();flush();flushPhotos();backfill(true);
   if(joined&&Remote.mode==='firebase')toast("You're in. Now Share → Add to Home Screen from this page.");
   if(Remote.mode==='firebase')setTimeout(()=>{if(!Remote.live)setSync('pending');},20000);
   try{if(!localStorage.getItem('shealog.tip1')){localStorage.setItem('shealog.tip1','1');setTimeout(()=>toast('Tip: hold any button to log it for an earlier time'),1500);}}catch(e){}
