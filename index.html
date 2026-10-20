@@ -303,6 +303,11 @@ label.f{display:block;font-size:11.5px;letter-spacing:.09em;text-transform:upper
 .jgrid .ph.loading::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:shimmer 1.2s infinite}
 textarea.plain{font-family:inherit;font-size:15px;min-height:90px;line-height:1.45}
 .jstart{display:flex;flex-direction:column;gap:12px}
+.linkbox{margin-top:16px;background:var(--feed-bg);color:var(--feed-ink);border-radius:14px;padding:12px 14px}
+.linkbox label{display:flex;align-items:center;gap:12px;font-weight:700;font-size:14.5px;cursor:pointer}
+.linkbox input{width:22px;height:22px;accent-color:var(--feed);margin:0;flex:none}
+.linkbox p{margin:6px 0 0 34px;font-size:12.5px;line-height:1.45;font-weight:500;opacity:.9}
+.row .split{color:var(--muted);font-weight:700}
 .btn:disabled{opacity:.45;pointer-events:none}
 .mvlist{display:flex;flex-direction:column;gap:6px}
 .mvrow{display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:14px;padding:11px 14px;font-size:14px;cursor:pointer}
@@ -493,6 +498,7 @@ table.gt tr:last-child td{border-bottom:0}
       <label class="f">Minutes on each side (optional)</label>
       <div class="durs" id="edDurs"></div>
     </div>
+    <div class="linkbox" id="edLink" hidden><label><input type="checkbox" id="edSplit"> Keep as a separate feed</label><p id="edLinkWhy"></p></div>
     <div id="edBottle">
       <label class="f">Amount</label>
       <div id="edBottleAmt"></div>
@@ -729,10 +735,19 @@ function fmtSec(sec){sec=Math.max(0,Math.round(sec));const m=Math.floor(sec/60),
    per-side minutes add up only the nursing time, so burp breaks drop out. A latch
    with no recorded minutes is assumed to have lasted ASSUMED_MIN for linking only. */
 const ASSUMED_MIN=20;
-function feedEnd(e,now){if(S.active&&S.active.id===e.id)return now;if(e.end)return e.end;if(e.t==='bottle')return e.at+15*60000;const g=segsOf(e);const sec=g?g.reduce((a,s)=>a+s.sec,0):(e.dur?e.dur*60:ASSUMED_MIN*60);return e.at+sec*1000;}
+/* When a feed "ends" for linking. A running timer counts as ongoing only while it has
+   been touched recently; a forgotten one stops 30 minutes after its last activity. A
+   recorded end time is trusted only up to the nursing time plus 30 minutes of breaks,
+   so an old timer closed hours late can't reach forward and grab the next feed. */
+const BREAK_MAX=30*60000;
+function feedEnd(e,now){
+  if(S.active&&S.active.id===e.id){const a=S.active;const la=lastActivity(a);if(now-la>STALE_MS)return la+BREAK_MAX;return a.paused?(a.pauseStart||now):now;}
+  if(e.t==='bottle')return e.at+15*60000;
+  const g=segsOf(e);const sec=g?g.reduce((a,s)=>a+s.sec,0):(e.dur?e.dur*60:ASSUMED_MIN*60);const base=e.at+sec*1000;
+  return e.end?Math.min(e.end,base+BREAK_MAX):base;}
 function gapMs(){const g=parseInt(S.settings.gap,10);return (isNaN(g)?10:g)*60000;}
 function sessions(feeds,now){now=now||Date.now();const out=[];
-  for(const e of feeds){const last=out[out.length-1];if(last&&e.at-last.end<=gapMs()){last.feeds.push(e);last.end=Math.max(last.end,feedEnd(e,now));}else out.push({start:e.at,end:feedEnd(e,now),feeds:[e]});}
+  for(const e of feeds){const last=out[out.length-1];if(last&&!e.split&&e.at-last.end<=gapMs()){last.feeds.push(e);last.end=Math.max(last.end,feedEnd(e,now));}else out.push({start:e.at,end:feedEnd(e,now),feeds:[e]});}
   for(const s of out){const m={L:0,R:0};let sides='',oz=0;for(const e of s.feeds){if(e.t==='bottle'){oz+=(+e.oz||0);if(sides[sides.length-1]!=='B')sides+='B';continue;}const mm=sideMins(e);m.L+=mm.L;m.R+=mm.R;for(const c of (e.side||'')){if(sides[sides.length-1]!==c)sides+=c;}}
     s.L=Math.round(m.L);s.R=Math.round(m.R);s.total=s.L+s.R;s.oz=round2(oz);s.sides=sides;s.parts=s.feeds.length;s.active=!!(S.active&&s.feeds.some(e=>e.id===S.active.id));}
   return out;}
@@ -756,13 +771,14 @@ const STALE_MS=90*60000;
 function lastActivity(a){return Math.max(a.segStart||a.start||0,a.pauseStart||0);}
 function startFeed(side){const a=S.active;const now=Date.now();
   if(a&&now-lastActivity(a)<STALE_MS){if(a.paused){resumeFeed(side);return;}if(a.side!==side){switchSide();return;}toast('Already feeding on the '+SIDE[side].toLowerCase()+' side');return;}
-  if(a)endFeed(true);
-  const ev={id:uid(),t:'feed',at:now,side,dur:null,by:me()};putEvent(ev);setActive({id:ev.id,day:dayKey(now),start:now,side,sides:side,segStart:now,segs:[],by:me()});toast('Feeding · '+SIDE[side],()=>{delEvent(ev);},null,{kind:'feed',icon:side,sub:'Started '+fmtTime(now)});}
+  let closed=null;if(a){closed=a;endFeed(true,a.paused?(a.pauseStart||lastActivity(a)):Math.min(now,(a.segStart||a.start)+BREAK_MAX));}
+  const ev={id:uid(),t:'feed',at:now,side,dur:null,by:me()};putEvent(ev);setActive({id:ev.id,day:dayKey(now),start:now,side,sides:side,segStart:now,segs:[],by:me()});
+  toast('Feeding · '+SIDE[side],()=>{delEvent(ev);},null,{kind:'feed',icon:side,sub:closed?'Closed the forgotten '+fmtTime(closed.start)+' feed · check its minutes':'Started '+fmtTime(now)});}
 function closeSeg(a,now){const segs=(a.segs||[]).map(s=>Object.assign({},s));if(a.paused)return segs;const sec=Math.max(1,Math.round((now-(a.segStart||a.start))/1000));const last=segs[segs.length-1];if(last&&last.s===a.side)last.sec+=sec;else segs.push({s:a.side,sec});return segs;}
 function pauseFeed(){const a=S.active;if(!a||a.paused)return;const now=Date.now();const segs=closeSeg(a,now);patchActiveEvent({side:a.sides,segs});setActive(Object.assign({},a,{segs,paused:true,pauseStart:now}));toast('Paused',null,null,{kind:'feed',icon:a.side,sub:SIDE[a.side]+' so far '+mins(segs[segs.length-1].sec)+' min'});}
 function resumeFeed(side){const a=S.active;if(!a)return;const now=Date.now();const sides=a.sides[a.sides.length-1]===side?a.sides:a.sides+side;patchActiveEvent({side:sides});setActive(Object.assign({},a,{side,sides,segStart:now,paused:false,pauseStart:null}));toast('Back on · '+SIDE[side],null,null,{kind:'feed',icon:side,sub:'Resumed '+fmtTime(now)});}
 function switchSide(){const a=S.active;if(!a)return;const ns=a.side==='L'?'R':'L';if(a.paused){resumeFeed(ns);return;}const now=Date.now();const sides=a.sides+ns;const segs=closeSeg(a,now);patchActiveEvent({side:sides,segs});setActive(Object.assign({},a,{side:ns,sides,segStart:now,segs}));toast('Switched to '+SIDE[ns],null,null,{kind:'feed',icon:ns,sub:SIDE[a.side]+' was '+mins(segs[segs.length-1].sec)+' min'});}
-function endFeed(silent){const a=S.active;if(!a)return;const now=Date.now();const segs=closeSeg(a,now);const dur=segTotal(segs);patchActiveEvent({side:a.sides,segs,dur,end:now});setActive(null);if(!silent)toast('Feed ended · '+dur+' min',null,null,{kind:'feed',icon:a.sides.slice(0,2),sub:segs.length>1?segs.map(s=>SIDE[s.s]+' '+mins(s.sec)).join(' · '):sideName(a.sides)});}
+function endFeed(silent,at){const a=S.active;if(!a)return;const now=at||Date.now();const segs=closeSeg(a,now);const dur=segTotal(segs);patchActiveEvent({side:a.sides,segs,dur,end:now});setActive(null);if(!silent)toast('Feed ended · '+dur+' min',null,null,{kind:'feed',icon:a.sides.slice(0,2),sub:segs.length>1?segs.map(s=>SIDE[s.s]+' '+mins(s.sec)).join(' · '):sideName(a.sides)});}
 function patchActiveEvent(patch){const a=S.active;const d=S.days[a.day];const ev=d&&d.events[a.id];if(ev&&!ev.del)putEvent(Object.assign({},ev,patch));}
 function photoOffer(ev){return{label:'Add photo',fn:()=>{const cur=(S.days[dayKey(ev.at)]||{events:{}}).events[ev.id];if(cur&&!cur.del){openEditor(cur);$('#photoIn').click();}}};}
 function loggedSub(ev){return 'Logged '+fmtTime(ev.at)+(who(ev.by)?' · '+who(ev.by):'');}
@@ -1300,6 +1316,7 @@ function render(){
       else{ic='<div class="ic spit">'+ICON.spit+'</div>';title='Spit-up';}
       if(e.photos&&e.photos.length)meta.push('<svg class="i cam"><use href="#i-cam"/></svg>'+e.photos.length);
       if(e.note)meta.push(esc(e.note));if(e.by)meta.push(esc(who(e.by)));
+      if(e.split&&(e.t==='feed'||e.t==='bottle')&&!fut)meta.push('<span class="split">separate feed</span>');
       if(fut){cls=' future';meta.unshift('<span class="plan">Planned · in '+until(e.at)+'</span>');}
       return '<button class="row'+cls+'" data-id="'+e.id+'"><div class="t num">'+fmtTime(e.at).replace(/ (AM|PM)/,'<small>$1</small>')+'</div>'+ic+'<div><div class="title">'+title+'</div>'+(meta.length?'<div class="meta">'+meta.join(' · ')+'</div>':'')+'</div></button>';
     }).join('');
@@ -1336,6 +1353,7 @@ function openEditor(ev,preset){
   if(!e.side)e.side='L';
   seg($('#edSide'),['L','R','LR','RL'].includes(e.side)?e.side:'',v=>{e.side=v;renderDurs(e,true);});
   renderDurs(e,false);
+  renderLinkBox(e);
   $('#edPee').checked=!!e.pee;$('#edPoop').checked=!!e.poop;
   if(e.t==='diaper'&&!e.pee&&!e.poop)$('#edPee').checked=true;
   $('#edAt').value=toLocalInput(e.at);$('#edNote').value=e.note||'';updateAtHint();
@@ -1379,6 +1397,14 @@ function renderDurs(e,keepTyped){
     return '<label><span>'+label+'</span><input type="number" inputmode="numeric" min="0" max="600" placeholder="—" data-i="'+i+'" value="'+v+'"></label>';}).join('')+(chars.length>1?'<div class="tot" id="edTot"></div>':'');
   el.oninput=updateTot;updateTot();
 }
+function renderLinkBox(e){const box=$('#edLink');if(ed.isNew||!(e.t==='feed'||e.t==='bottle')){box.hidden=true;return;}
+  const now=Date.now();const feeds=allEvents().filter(x=>(x.t==='feed'||x.t==='bottle')&&x.at<=now&&x.id!==e.id);
+  const prev=feeds.filter(x=>x.at<e.at).pop();const gapMin=prev?Math.round((e.at-feedEnd(prev,now))/60000):null;
+  const wouldLink=prev&&(e.at-feedEnd(prev,now))<=gapMs();
+  if(!e.split&&!wouldLink){box.hidden=true;return;}
+  box.hidden=false;$('#edSplit').checked=!!e.split;
+  const pl=prev?(prev.t==='bottle'?'bottle':'feed')+' at '+fmtTime(prev.at)+(dayKey(prev.at)!==dayKey(e.at)?' '+fmtDate(dayKey(prev.at)):''):'';
+  $('#edLinkWhy').textContent=e.split?'Kept apart from the '+pl+'. Untick to let the app link them again.':'Linked to the '+pl+': this one started '+(gapMin<=0?'before that one had ended':gapMin+' min after it ended')+'. Tick to count it as its own feed.';}
 function readDurs(){return [...document.querySelectorAll('#edDurs input')].map(i=>{const n=parseInt(i.value,10);return isNaN(n)||n<=0?null:n;});}
 function updateTot(){const t=$('#edTot');if(!t)return;const s=readDurs().reduce((a,n)=>a+(n||0),0);t.textContent=s?'Total '+s+' min':'';}
 function saveEditor(){
@@ -1387,6 +1413,7 @@ function saveEditor(){
   if(future){const WHAT={feed:'feed',bottle:'bottle',pump:'pumping session',diaper:'diaper',spit:'spit-up'};const when=fmtTime(at)+(dayKey(at)!==today()?' on '+fmtDate(dayKey(at)):'');
     if(!confirm('That time is '+until(at)+' from now.\n\nBook this '+(WHAT[e.t]||'entry')+' for '+when+'?'))return;}
   const out={id:e.id,t:e.t,at,by:e.by||me()};
+  if((e.t==='feed'||e.t==='bottle')&&!$('#edLink').hidden&&$('#edSplit').checked)out.split=true;
   const note=$('#edNote').value.trim();if(note)out.note=note;
   if((e.t==='diaper'||e.t==='spit')&&e.photos&&e.photos.length)out.photos=e.photos.slice();else if(e.photos&&e.photos.length){for(const id of e.photos)discardPhoto(id);}
   if(e.t==='bottle'){const oz=parseFloat($('#edOz').value);if(isNaN(oz)||oz<=0){toast('How many ounces did she take?');return;}out.oz=round2(oz);const sp=$('#edSrc [aria-pressed="true"]');out.src=sp?sp.dataset.v:'bm';
